@@ -4,46 +4,54 @@
   <title>Web Audio demo 1</title>
 </head>
 
+<body>
+</body>
+
 <script>
-  // create web audio api context
-  var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
   const midiNotes = {
     C4: 60,
     A4: 69,
   }
+  const freqForMidiNoteNumber = n => Math.pow(2, (n-69)/12) * 440
 
-  var gainNode = audioCtx.createGain();
+  const gainNode = audioCtx.createGain();
   gainNode.gain.setValueAtTime(0.20, audioCtx.currentTime);
   gainNode.connect(audioCtx.destination);
 
-  // oscillator.type = 'triangle';
-  const playOscillator = (midiNote=midiNotes.C4, startTimeOffset=0) => {
+  const playOscillator = (midiNote, startTime) => {
+    if (!midiNote) return;
     const oscillator = audioCtx.createOscillator();
+    // oscillator.type = 'triangle';
     oscillator.frequency.setValueAtTime(freqForMidiNoteNumber(midiNote), audioCtx.currentTime); // value in hertz
     oscillator.connect(gainNode);
-    oscillator.start(audioCtx.currentTime + startTimeOffset + 0.0);
-    oscillator.stop (audioCtx.currentTime + startTimeOffset + 0.1);
-    oscillator.onended = () => {
-      console.log("end", audioCtx.currentTime);
-      // playOscillator();
-    }
-    console.log("start", midiNote, audioCtx.currentTime);
+    oscillator.start(startTime + 0.0);
+    oscillator.stop (startTime + 0.1);
+    oscillator.onended = () => { console.log("end", audioCtx.currentTime); }
+    // console.log("start", startTime, audioCtx.currentTime, midiNote, );
   }
 
-  const freqForMidiNoteNumber = n =>Math.pow(2, (n-69)/12) * 440
+  const bpm = 120
+  const lookaheadDuration = 0.5
+  const startTime = audioCtx.currentTime
 
-
-  let i=0;
-  playOscillator(midiNotes.A4, i++);
-  playOscillator(midiNotes.C4, i++);
-  playOscillator(midiNotes.C4, i++);
-  playOscillator(midiNotes.C4, i++);
+  const notes = [
+    midiNotes.A4-12,
+    midiNotes.A4,
+    midiNotes.A4+7,
+    midiNotes.A4,
+  ]
+  let beatI = 0;
+  const schedule = () => {
+    for (let beatTime; (beatTime = 60 * 1/bpm * beatI) < audioCtx.currentTime + lookaheadDuration; beatI++) {
+      playOscillator(notes[beatI % notes.length], beatTime)
+      console.log("beat", beatI % notes.length, beatI, beatTime, audioCtx.currentTime)
+    }
+    window.requestAnimationFrame(schedule)
+  }
+  window.requestAnimationFrame(schedule)
 
 </script>
-
-<body>
-  hi
-</body>
 
 </html>
