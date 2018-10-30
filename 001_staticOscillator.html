@@ -28,25 +28,24 @@
     oscillator.connect(gainNode);
     oscillator.start(startTime + 0.0);
     oscillator.stop (startTime + 0.1);
-    oscillator.onended = () => { console.log("end", audioCtx.currentTime); }
-    // console.log("start", startTime, audioCtx.currentTime, midiNote, );
+    // oscillator.onended = () => { console.log("end", audioCtx.currentTime); }
+    console.log("start", startTime, midiNote, audioCtx.currentTime, );
   }
 
   const bpm = 120
-  const lookaheadDuration = 0.5
+  const lookaheadDuration = 1
   const startTime = audioCtx.currentTime
 
-  const notes = [
-    midiNotes.A4-12,
-    midiNotes.A4,
-    midiNotes.A4+7,
-    midiNotes.A4,
-  ]
-  let beatI = 0;
+  let beatI = 0
   const schedule = () => {
     for (let beatTime; (beatTime = 60 * 1/bpm * beatI) < audioCtx.currentTime + lookaheadDuration; beatI++) {
-      playOscillator(notes[beatI % notes.length], beatTime)
-      console.log("beat", beatI % notes.length, beatI, beatTime, audioCtx.currentTime)
+      const b = beatI % 16
+      playOscillator(
+        midiNotes.A4 + (
+          !(b%16) ? -12 :
+          !(b%4)  ?  -7 : 0 ),
+        beatTime )
+      console.log("beat", b, beatI, beatTime, audioCtx.currentTime)
     }
     window.requestAnimationFrame(schedule)
   }
