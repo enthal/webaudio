@@ -1,0 +1,49 @@
+<html>
+
+<head>
+  <title>Web Audio demo 1</title>
+</head>
+
+<script>
+  // create web audio api context
+  var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  const midiNotes = {
+    C4: 60,
+    A4: 69,
+  }
+
+  var gainNode = audioCtx.createGain();
+  gainNode.gain.setValueAtTime(0.20, audioCtx.currentTime);
+  gainNode.connect(audioCtx.destination);
+
+  // oscillator.type = 'triangle';
+  const playOscillator = (midiNote=midiNotes.C4, startTimeOffset=0) => {
+    const oscillator = audioCtx.createOscillator();
+    oscillator.frequency.setValueAtTime(freqForMidiNoteNumber(midiNote), audioCtx.currentTime); // value in hertz
+    oscillator.connect(gainNode);
+    oscillator.start(audioCtx.currentTime + startTimeOffset + 0.0);
+    oscillator.stop (audioCtx.currentTime + startTimeOffset + 0.1);
+    oscillator.onended = () => {
+      console.log("end", audioCtx.currentTime);
+      // playOscillator();
+    }
+    console.log("start", midiNote, audioCtx.currentTime);
+  }
+
+  const freqForMidiNoteNumber = n =>Math.pow(2, (n-69)/12) * 440
+
+
+  let i=0;
+  playOscillator(midiNotes.A4, i++);
+  playOscillator(midiNotes.C4, i++);
+  playOscillator(midiNotes.C4, i++);
+  playOscillator(midiNotes.C4, i++);
+
+</script>
+
+<body>
+  hi
+</body>
+
+</html>
