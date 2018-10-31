@@ -29,21 +29,30 @@
   const freqForMidiNoteNumber = n => Math.pow(2, (n-69)/12) * 440
 
   const master = audioCtx.createGain();
-  master.gain.setValueAtTime(0.20, audioCtx.currentTime);
+  master.gain.value = 0.2;
   master.connect(audioCtx.destination);
 
   const playingNodeSet = new Set;
 
   const playOscillator = (midiNote, startTime) => {
     if (!midiNote) return;
+    const duration = 0.5;
     const oscillator = audioCtx.createOscillator();
     // oscillator.type = 'triangle';
-    oscillator.frequency.setValueAtTime(freqForMidiNoteNumber(midiNote), audioCtx.currentTime);
-    oscillator.connect(master);
+    oscillator.frequency.value = freqForMidiNoteNumber(midiNote);
     oscillator.start(startTime + 0.0);
-    oscillator.stop (startTime + 0.5);
+    oscillator.stop (startTime + duration);
+
+    const envelope = audioCtx.createGain();
+    envelope.gain.setValueAtTime          (0.0, startTime + 0);
+    envelope.gain.linearRampToValueAtTime (1.0, startTime + duration/10);
+    envelope.gain.linearRampToValueAtTime (0.0, startTime + duration);
+
+    oscillator.connect(envelope);
+    envelope.connect(master);
+
     playingNodeSet.add(oscillator);
-    oscillator.onended = () => {
+    oscillator.onended = () => {  // on stop/end by _any_ means
       playingNodeSet.delete(oscillator);
       // console.log("end", audioCtx.currentTime);
     }
