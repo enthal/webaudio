@@ -2,9 +2,16 @@
 
 <head>
   <title>Web Audio demo 1</title>
+  <style>
+    #playStopButton { font-size: 1200%; }
+    #playStopButton:before { content: "▶︎"; }
+    .playing #playStopButton:before { content: "⬛︎"; }
+  </style>
 </head>
 
-<body>
+<body id=appRoot>
+  <div id=playStopButton></div>
+</div>
 </body>
 
 <script>
@@ -20,6 +27,8 @@
   gainNode.gain.setValueAtTime(0.20, audioCtx.currentTime);
   gainNode.connect(audioCtx.destination);
 
+  const playingNodeSet = new Set;
+
   const playOscillator = (midiNote, startTime) => {
     if (!midiNote) return;
     const oscillator = audioCtx.createOscillator();
@@ -28,28 +37,49 @@
     oscillator.connect(gainNode);
     oscillator.start(startTime + 0.0);
     oscillator.stop (startTime + 0.1);
-    // oscillator.onended = () => { console.log("end", audioCtx.currentTime); }
+    playingNodeSet.add(oscillator);
+    oscillator.onended = () => {
+      playingNodeSet.delete(oscillator);
+      // console.log("end", audioCtx.currentTime);
+    }
     console.log("start", startTime, midiNote, audioCtx.currentTime, );
   }
 
-  const bpm = 120
+  let playing = false
+  const bpm = 160
   const lookaheadDuration = 1
-  const startTime = audioCtx.currentTime
+  let startTime = audioCtx.currentTime
 
   let beatI = 0
-  const schedule = () => {
-    for (let beatTime; (beatTime = 60 * 1/bpm * beatI) < audioCtx.currentTime + lookaheadDuration; beatI++) {
+  const scheduleOscillator = () => {
+    for (let beatTime; (beatTime = 60 * 1/bpm * beatI) < audioCtx.currentTime - startTime + lookaheadDuration; beatI++) {
       const b = beatI % 16
       playOscillator(
         midiNotes.A4 + (
           !(b%16) ? -12 :
           !(b%4)  ?  -7 : 0 ),
-        beatTime )
+        startTime + beatTime )
       console.log("beat", b, beatI, beatTime, audioCtx.currentTime)
     }
-    window.requestAnimationFrame(schedule)
   }
-  window.requestAnimationFrame(schedule)
+
+  const scheduleAll = () => {
+    scheduleOscillator();
+    if (playing)  window.requestAnimationFrame(scheduleAll)
+  }
+
+  document.querySelector('#playStopButton').addEventListener('click', () => {
+    playing = !playing
+    document.querySelector('#appRoot').classList.toggle('playing',playing)
+    if (playing)  {
+      startTime = audioCtx.currentTime
+      beatI = 0;
+      window.requestAnimationFrame(scheduleAll)  // https://www.html5rocks.com/en/tutorials/audio/scheduling/
+    } else {
+      playingNodeSet.forEach( x => { console.log(x); x.stop(); } );
+    }
+    console.log("playing",playing);
+  })
 
 </script>
 
