@@ -30,7 +30,7 @@
 
   const playingNodeSet = new Set;
 
-  const playOscillator = (midiNote, startTime) => {
+  const scheduleOscillator = (midiNote, startTime) => {
     if (!midiNote) return;
     const duration = 0.5;
     const oscillator = audioCtx.createOscillator();
@@ -66,28 +66,28 @@
   const timeValueDomNode = document.querySelector('#timeValue');
 
   let beatI = 0;  // lookahead beat
-  const scheduleOscillator = () => {
+  const lookaheadSchedule = () => {
     const playTime = audioCtx.currentTime - startTime;
+
+    // timeValueDomNode.innerText = playTime;
+    beatValueDomNode.innerText = Math.floor(playTime * bps);
+    timeValueDomNode.innerText = (+beatValueDomNode.innerText / bps).toFixed(2);
+
     for (let beatTime; (beatTime = 1/bps * beatI) < playTime + lookaheadDuration; beatI++) {
-      playOscillator(
+      scheduleOscillator(
         69 + (    // MIDI A4
           !(beatI%16) ? -12 :
           !(beatI%4)  ?  -7 : 0 ),
         startTime + beatTime )
-
-      // timeValueDomNode.innerText = playTime;
-      beatValueDomNode.innerText = Math.floor(playTime * bps);
-      timeValueDomNode.innerText = (+beatValueDomNode.innerText / bps).toFixed(2);
-
-      console.log("beat", beatI, beatTime, playTime, audioCtx.currentTime)
+      console.log("schedule beat", beatI%16, beatI%4, beatI, beatTime, playTime, audioCtx.currentTime)
     }
   }
 
-  const scheduleAll = () => {
-    scheduleOscillator();
-    window.requestAnimationFrame(scheduleAll)
+  const scheduleForever = () => {
+    lookaheadSchedule();
+    window.requestAnimationFrame(scheduleForever)
   }
-  window.requestAnimationFrame(scheduleAll)  // https://www.html5rocks.com/en/tutorials/audio/scheduling/
+  window.requestAnimationFrame(scheduleForever)  // https://www.html5rocks.com/en/tutorials/audio/scheduling/
 
   audioCtx.suspend();
   document.querySelector('#playStopButton').addEventListener('click', () => {
