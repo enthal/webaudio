@@ -3,7 +3,8 @@
 <head>
   <title>Web Audio demo 1</title>
   <style>
-    .big.button { font-size: 1200%; text-align: center; }
+
+    body { font-size: 300%; text-align: center; }
     #playStopButton:before { content: "▶︎"; }
     .playing #playStopButton:before { content: "||"; }
     #restartButton:before { content: "⎌"; }
@@ -11,8 +12,10 @@
 </head>
 
 <body id=appRoot>
-  <div id=playStopButton class="big button"></div>
-  <div id=restartButton  class="big button"></div>
+  <div id=playStopButton></div>
+  <div id=restartButton ></div>
+  <div id=beatValue ></div>
+  <div id=timeValue ></div>
 </div>
 </body>
 
@@ -44,24 +47,32 @@
       playingNodeSet.delete(oscillator);
       // console.log("end", audioCtx.currentTime);
     }
-    console.log("start", startTime, midiNote, audioCtx.currentTime, );
+    // console.log("start", startTime, midiNote, audioCtx.currentTime, );
   }
 
   let playing = false
-  const bpm = 160
+  const bps = 160/60;
   const lookaheadDuration = 1
   let startTime = audioCtx.currentTime
+  const beatValueDomNode = document.querySelector('#beatValue');
+  const timeValueDomNode = document.querySelector('#timeValue');
 
-  let beatI = 0
+  let beatI = 0;  // lookahead beat
   const scheduleOscillator = () => {
-    for (let beatTime; (beatTime = 60 * 1/bpm * beatI) < audioCtx.currentTime - startTime + lookaheadDuration; beatI++) {
+    const playTime = audioCtx.currentTime - startTime;
+    for (let beatTime; (beatTime = 1/bps * beatI) < playTime + lookaheadDuration; beatI++) {
       const b = beatI % 16
       playOscillator(
         midiNotes.A4 + (
           !(b%16) ? -12 :
           !(b%4)  ?  -7 : 0 ),
         startTime + beatTime )
-      console.log("beat", b, beatI, beatTime, audioCtx.currentTime)
+
+      // timeValueDomNode.innerText = playTime;
+      beatValueDomNode.innerText = Math.floor(playTime * bps);
+      timeValueDomNode.innerText = (+beatValueDomNode.innerText / bps).toFixed(2);
+
+      console.log("beat", b, beatI, beatTime, playTime, audioCtx.currentTime)
     }
   }
 
