@@ -3,14 +3,16 @@
 <head>
   <title>Web Audio demo 1</title>
   <style>
-    #playStopButton { font-size: 1200%; }
+    .big.button { font-size: 1200%; text-align: center; }
     #playStopButton:before { content: "▶︎"; }
-    .playing #playStopButton:before { content: "⬛︎"; }
+    .playing #playStopButton:before { content: "||"; }
+    #restartButton:before { content: "⎌"; }
   </style>
 </head>
 
 <body id=appRoot>
-  <div id=playStopButton></div>
+  <div id=playStopButton class="big button"></div>
+  <div id=restartButton  class="big button"></div>
 </div>
 </body>
 
@@ -65,20 +67,22 @@
 
   const scheduleAll = () => {
     scheduleOscillator();
-    if (playing)  window.requestAnimationFrame(scheduleAll)
+    window.requestAnimationFrame(scheduleAll)
   }
+  window.requestAnimationFrame(scheduleAll)  // https://www.html5rocks.com/en/tutorials/audio/scheduling/
 
+  audioCtx.suspend();
   document.querySelector('#playStopButton').addEventListener('click', () => {
     playing = !playing
     document.querySelector('#appRoot').classList.toggle('playing',playing)
-    if (playing)  {
-      startTime = audioCtx.currentTime
-      beatI = 0;
-      window.requestAnimationFrame(scheduleAll)  // https://www.html5rocks.com/en/tutorials/audio/scheduling/
-    } else {
-      playingNodeSet.forEach( x => { console.log(x); x.stop(); } );
-    }
+    playing ? audioCtx.resume() : audioCtx.suspend();
     console.log("playing",playing);
+  })
+  document.querySelector('#restartButton').addEventListener('click', () => {
+    console.log("restart");
+    playingNodeSet.forEach( x => { console.log(x); x.stop(); } );
+    startTime = audioCtx.currentTime;
+    beatI = 0;
   })
 
 </script>
