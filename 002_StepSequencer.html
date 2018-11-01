@@ -15,7 +15,13 @@
       height: 4em;
     }
     #beatGrid button.on {
-      background-color: #FF0;
+      background-color: #DD0;
+    }
+    #beatGrid button.current {
+      background-color: #888;
+    }
+    #beatGrid button.current.on {
+      background-color: #FF3;
     }
   </style>
 </head>
@@ -105,22 +111,35 @@
   const beatValueDomNode = document.querySelector('#beatValue');
   const timeValueDomNode = document.querySelector('#timeValue');
 
-  let beatI = 0;  // lookahead beat
+  let lookaheadBeatI = 0;  // lookahead beat
+  let lastCurrentBeatI = -1;
   const lookaheadSchedule = () => {
     const playTime = audioCtx.currentTime - startTime;
+    const currentBeatI = Math.floor(playTime * bps);
+    if (lastCurrentBeatI !== currentBeatI) {
+      lastCurrentBeatI = currentBeatI;
+      // timeValueDomNode.innerText = playTime;
+      beatValueDomNode.innerText = currentBeatI;
+      timeValueDomNode.innerText = (+beatValueDomNode.innerText / bps).toFixed(2);
 
-    // timeValueDomNode.innerText = playTime;
-    beatValueDomNode.innerText = Math.floor(playTime * bps);
-    timeValueDomNode.innerText = (+beatValueDomNode.innerText / bps).toFixed(2);
+      // TODO: instead push beat events to consumers for update
+      document.querySelectorAll('#beatGrid button.current')
+        .forEach(x=>x.classList.remove('current'));
+      document.querySelectorAll(`#beatGrid button:nth-child(${ 1 + currentBeatI % stepCount })`)
+        .forEach(x=>x.classList.add('current'));
 
-    for (let beatTime; (beatTime = 1/bps * beatI) < playTime + lookaheadDuration; beatI++) {
-      const stepI = beatI % stepCount;
+      console.log("currentBeatI",currentBeatI);
+    }
+
+
+    for (let beatTime; (beatTime = 1/bps * lookaheadBeatI) < playTime + lookaheadDuration; lookaheadBeatI++) {
+      const stepI = lookaheadBeatI % stepCount;
       drumNotes.forEach( (drumNote, drumI) => {
-        if (grid[drumI][beatI % stepCount])
+        if (grid[drumI][lookaheadBeatI % stepCount])
           scheduleOscillator(drumNote, startTime + beatTime);
       });
 
-      console.log("schedule beat", beatI%stepCount, beatI%4, beatI, beatTime, playTime, audioCtx.currentTime)
+      console.log("schedule beat", lookaheadBeatI%stepCount, lookaheadBeatI%4, lookaheadBeatI, beatTime, playTime, audioCtx.currentTime)
     }
   }
 
@@ -141,7 +160,8 @@
     console.log("restart");
     playingNodeSet.forEach( x => { console.log(x); x.stop(); } );
     startTime = audioCtx.currentTime;
-    beatI = 0;
+    lookaheadBeatI = 0;
+    lastCurrentBeatI = -1;
   })
 
 
