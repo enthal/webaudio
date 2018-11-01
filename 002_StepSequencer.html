@@ -44,17 +44,18 @@
   const makeDomBeatGrid = () => {
     drumNotes.forEach( (drumNote, drumI) => {
       console.log("-- drum", drumI);
-      grid.push([]);
+      const drum = [];
+      grid.push(drum);
 
       const drumRow = document.createElement('div');
       document.querySelector('#beatGrid').appendChild( drumRow );
       for (let stepI = 0; stepI < stepCount; stepI++) {
         console.log("step", stepI);
-        grid[drumI].push(false);
+        drum.push(false);
         const button = document.createElement('button');
         button.addEventListener('click', () => {
-          grid[drumI][stepI] = !grid[drumI][stepI];
-          button.classList.toggle('on', grid[drumI][stepI]);
+          drum[stepI] = !drum[stepI];
+          button.classList.toggle('on', drum[stepI]);
         });
         drumRow.appendChild(button);
       }
@@ -71,7 +72,6 @@
   const playingNodeSet = new Set;
 
   const scheduleOscillator = (midiNote, startTime) => {
-    if (!midiNote) return;
     const duration = 0.5;
     const oscillator = audioCtx.createOscillator();
     // oscillator.type = 'triangle';
