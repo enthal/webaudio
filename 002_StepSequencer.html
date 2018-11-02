@@ -4,7 +4,10 @@
   <title>Web Audio demo 2 - Step sequencer</title>
   <style>
 
-    body { font-size: 300%; text-align: center; }
+    body {
+      text-align: center;
+      font-family: sans-serif;
+    }
 
     #top-controls {
       padding: 0.2em;
@@ -15,6 +18,12 @@
       background-color: #DDD;
       padding: 0 0.2em;
       border-radius: 10px;
+    }
+    #top-controls > .button {
+      font-size: 300%;
+    }
+    #top-controls > .value {
+      font-size: 200%;
       font-family: monospace;
     }
 
@@ -42,10 +51,13 @@
 <body id=app-root>
 
   <div id=top-controls>
-    <div id=play-stop-button></div>
-    <div id=restart-button></div>
-    <div id=beat-value></div>
-    <div id=time-value></div>
+    <div id=play-stop-button class=button></div>
+    <div id=restart-button   class=button></div>
+    <div id=beat-value class=value></div>
+    <div id=time-value class=value></div>
+
+    <label for="gain-input">Gain</label>
+    <input name="gain-input" id="gain-input" type="range" min="0" max="1" value=0.2 step="0.05" />
   </div>
 
   <div id=beat-grid></div>
@@ -121,7 +133,7 @@
   }
 
   let playing = false
-  const bps = 160/60;
+  let bps = 160/60;
   const lookaheadDuration = 1
   let startTime = audioCtx.currentTime
   const beatValueDomNode = document.querySelector('#beat-value');
@@ -134,7 +146,7 @@
     const playTime = audioCtx.currentTime - startTime;
     const currentBeatI = Math.floor(playTime * bps);
     if (lastCurrentBeatI !== currentBeatI) {
-      if (!(currentBeatI%8))  console.log("-- LOOP");
+      if (!(currentBeatI%8))  console.log("-- incrementLookaheadSchedule LOOP");
       lastCurrentBeatI = currentBeatI;
       // timeValueDomNode.innerText = playTime;
       beatValueDomNode.innerText = currentBeatI;
@@ -213,8 +225,17 @@
     audioCtx.suspend();  // but still perhaps playing==true: if so, will resume in incrementLookaheadSchedule; ensures we schedule first beat!
   })
 
+  const gainInput = document.querySelector('#gain-input');
+  const adjustGain = () => {
+    console.log("gain", +gainInput.value);
+    master.gain.linearRampToValueAtTime(+gainInput.value, audioCtx.currentTime + 0.01);
+  }
+  adjustGain();
+  gainInput.addEventListener('input', adjustGain);
+
 
   RUN();
+
 </script>
 
 </html>
