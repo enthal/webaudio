@@ -80,7 +80,23 @@
         });
         drumRow.appendChild(button);
       }
+
+
     })
+
+    // thinking out loud; an imagined evolution on https://gist.github.com/jonathantneal/7935589
+    H.e(H.s('#beat-grid'), drumNotes.map((drumNote, drumI) => {
+      const drum = [];
+      grid.push(drum);
+      return H.n(stepCount, stepI => {
+        drum.push(false);
+        H.e('button', button => {click: () => {
+          drum[stepI] = !drum[stepI];
+          H.cl(button, 'on', drum[stepI]);
+          resetLookaheadSchedule();
+        }})
+      })
+    }))
   }
 
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
