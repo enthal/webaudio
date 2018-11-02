@@ -5,34 +5,50 @@
   <style>
 
     body { font-size: 300%; text-align: center; }
-    #playStopButton:before { content: "▶︎"; }
-    .playing #playStopButton:before { content: "||"; }
-    #restartButton:before { content: "⎌"; }
 
-    #beatGrid button {
+    #top-controls {
+      padding: 0.2em;
+      background-color: #f7f7f7;
+    }
+    #top-controls > * {
+      display: inline-block;
+      background-color: #DDD;
+      padding: 0 0.2em;
+      border-radius: 10px;
+      font-family: monospace;
+    }
+
+    #play-stop-button:before { content: "▶︎"; }
+    .playing #play-stop-button:before { content: "||"; }
+    #restart-button:before { content: "⎌"; }
+
+    #beat-grid button {
       background-color: #444;
       width:  4em;
       height: 4em;
     }
-    #beatGrid button.on {
+    #beat-grid button.on {
       background-color: #DD0;
     }
-    #beatGrid button.current {
+    #beat-grid button.current {
       background-color: #888;
     }
-    #beatGrid button.current.on {
+    #beat-grid button.current.on {
       background-color: #FF3;
     }
   </style>
 </head>
 
-<body id=appRoot>
-  <div id=playStopButton></div>
-  <div id=restartButton ></div>
-  <div id=beatValue ></div>
-  <div id=timeValue ></div>
+<body id=app-root>
 
-  <div id=beatGrid ></div>
+  <div id=top-controls>
+    <div id=play-stop-button></div>
+    <div id=restart-button></div>
+    <div id=beat-value></div>
+    <div id=time-value></div>
+  </div>
+
+  <div id=beat-grid></div>
 </div>
 </body>
 
@@ -49,14 +65,12 @@
   const grid = [];
   const makeDomBeatGrid = () => {
     drumNotes.forEach( (drumNote, drumI) => {
-      console.log("-- drum", drumI);
       const drum = [];
       grid.push(drum);
 
       const drumRow = document.createElement('div');
-      document.querySelector('#beatGrid').appendChild( drumRow );
+      document.querySelector('#beat-grid').appendChild( drumRow );
       for (let stepI = 0; stepI < stepCount; stepI++) {
-        console.log("step", stepI);
         drum.push(false);
         const button = document.createElement('button');
         button.addEventListener('click', () => {
@@ -79,7 +93,7 @@
   const scheduledNodeSet = new Set;
 
   const scheduleOscillator = (midiNote, startTime) => {
-    const duration = 1.5;
+    const duration = 1.0;
     const oscillator = audioCtx.createOscillator();
     oscillator.$startTime = startTime;  // dirty?  for later cancellation
     // oscillator.type = 'triangle';
@@ -110,8 +124,8 @@
   const bps = 160/60;
   const lookaheadDuration = 1
   let startTime = audioCtx.currentTime
-  const beatValueDomNode = document.querySelector('#beatValue');
-  const timeValueDomNode = document.querySelector('#timeValue');
+  const beatValueDomNode = document.querySelector('#beat-value');
+  const timeValueDomNode = document.querySelector('#time-value');
 
   // C.f., https://www.html5rocks.com/en/tutorials/audio/scheduling/
   let lookaheadBeatI = 0;  // lookahead beat
@@ -127,9 +141,9 @@
       timeValueDomNode.innerText = (currentBeatI / bps).toFixed(2);
 
       // TODO: instead push beat events to consumers for update
-      document.querySelectorAll('#beatGrid button.current')
+      document.querySelectorAll('#beat-grid button.current')
         .forEach(x=>x.classList.remove('current'));
-      document.querySelectorAll(`#beatGrid button:nth-child(${ 1 + currentBeatI % stepCount })`)
+      document.querySelectorAll(`#beat-grid button:nth-child(${ 1 + currentBeatI % stepCount })`)
         .forEach(x=>x.classList.add('current'));
 
       // console.log("currentBeatI",currentBeatI);
@@ -157,8 +171,7 @@
       // console.log("schedule beat", stepI, lookaheadBeatI%4, lookaheadBeatI, beatTime, playTime, audioCtx.currentTime)
     }
 
-    // if (playing)  audioCtx.resume();
-    playing ? audioCtx.resume() : audioCtx.suspend();
+    playing ? audioCtx.resume() : audioCtx.suspend();   // TODO: seems OK to call this every time, but...
   }
 
   resetLookaheadSchedule = () => {
@@ -183,12 +196,12 @@
   window.requestAnimationFrame(scheduleForever)  // https://www.html5rocks.com/en/tutorials/audio/scheduling/
 
   audioCtx.suspend();
-  document.querySelector('#playStopButton').addEventListener('click', () => {
+  document.querySelector('#play-stop-button').addEventListener('click', () => {
     playing = !playing
-    document.querySelector('#appRoot').classList.toggle('playing',playing)
+    document.querySelector('#app-root').classList.toggle('playing',playing)
     console.log("playing",playing);
   })
-  document.querySelector('#restartButton').addEventListener('click', () => {
+  document.querySelector('#restart-button').addEventListener('click', () => {
     console.log("restart");
     scheduledNodeSet.forEach( x => {
       console.log("stop", x);
