@@ -174,18 +174,18 @@
 
   // C.f., https://www.html5rocks.com/en/tutorials/audio/scheduling/
   /*let*/ startTime = audioCtx.currentTime
-  /*let*/ lookaheadBeatI = 0;
+  /*let*/ beatReal = 0;
+  /*let*/ lastBeatI = -1;
   /*let*/ lastScheduledBeatI = -1;
   /*let*/ lastScheduledTime = null;
-  /*let*/ lastBeatI = -1;
-  /*let*/ beatReal = 0;
   /*let*/ lastScheduleCallTime = audioCtx.currentTime;
   const incrementLookaheadSchedule = () => {
-    const playTime = audioCtx.currentTime - startTime;
+    const now = audioCtx.currentTime;
+    const playTime = now - startTime;
     const beatI = Math.floor(beatReal);
 
     if (lastBeatI !== beatI) {
-      if (!(beatI%8))  console.log("-- beatI LOOP");
+      if (!(beatI%8))  console.log("-- beatI LOOP", beatI%8, beatI);
       lastBeatI = beatI;
       beatValueDomNode.innerText = beatI;
       timeValueDomNode.innerText = playTime.toFixed(2);
@@ -199,10 +199,9 @@
       console.log("beatI", beatI, playTime.toFixed(2));
     }
 
-    // for (let scheduleBeatI = lastScheduledBeatI; ++scheduleBeatI <  ;  lookaheadBeatI++) {
     let scheduleBeatI = lastScheduledBeatI;
     for (;;) {
-      const beatPart = beatReal - beatI
+      const beatPart = beatReal - beatI;
       const scheduleTime = (lastScheduledTime == null)
         ? playTime          + (beatPart && 1 - beatPart) / bps
         : lastScheduledTime +                          1 / bps;
@@ -215,22 +214,21 @@
       let scheduledCount = 0;
       drumNotes.forEach( (drumNote, drumI) => {
         if (grid[drumI][stepI]) {
-          scheduleOscillator(drumNote, audioCtx.currentTime + scheduleTime);
+          scheduleOscillator(drumNote, startTime + scheduleTime);
           scheduledCount++;
         }
       });
       if (scheduledCount) {
-        console.log("scheduled", scheduledCount, stepI, lookaheadBeatI%4,
-          lookaheadBeatI, beatReal.toFixed(4), (playTime + lookaheadDuration).toFixed(4))
+        console.log("scheduled", scheduledCount, stepI, scheduleBeatI%4,
+          scheduleBeatI, beatReal.toFixed(4), (playTime + lookaheadDuration).toFixed(4))
       }
-      // console.log("schedule beat", stepI, lookaheadBeatI%4, lookaheadBeatI, beatReal, playTime, audioCtx.currentTime)
     }
 
     playing ? audioCtx.resume() : audioCtx.suspend();   // TODO: seems OK to call this every time, but...
 
-    beatReal += (audioCtx.currentTime - lastScheduleCallTime) / bps;
+    beatReal += (now - lastScheduleCallTime) * bps;
+    lastScheduleCallTime = now;
     // console.log("beatReal",beatReal);
-    lastScheduleCallTime = audioCtx.currentTime;
   }
 
   resetLookaheadSchedule = () => {
@@ -245,7 +243,7 @@
       console.log(x.$startTime, stopped?"stop":"spare", +(x.$startTime - audioCtx.currentTime).toFixed(4), x);
     } );
 
-    lookaheadBeatI = lastBeatI;  // next incrementLookaheadSchedule will rebuild
+    // next incrementLookaheadSchedule will rebuild
     lastScheduledTime = null;
     lastScheduledBeatI = Math.floor(beatReal);
   }
@@ -269,7 +267,6 @@
       x.stop();  // stop even already-playing notes
     } );
     startTime = audioCtx.currentTime;
-    lookaheadBeatI = 0;
     lastScheduledBeatI = -1;
     lastScheduledTime = null;
     lastBeatI = -1;
