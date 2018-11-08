@@ -173,11 +173,6 @@
   const timeValueDomNode = document.querySelector('#time-value');
 
   // C.f., https://www.html5rocks.com/en/tutorials/audio/scheduling/
-  /*let*/ startTime = audioCtx.currentTime
-  /*let*/ beatReal = 0;
-  /*let*/ lastBeatI = -1;
-  /*let*/ lastScheduledBeatI = -1;
-  /*let*/ lastScheduledTime = null;
   /*let*/ lastScheduleCallTime = audioCtx.currentTime;
   const incrementLookaheadSchedule = () => {
     const now = audioCtx.currentTime;
@@ -243,10 +238,26 @@
       console.log(x.$startTime, stopped?"stop":"spare", +(x.$startTime - audioCtx.currentTime).toFixed(4), x);
     } );
 
-    // next incrementLookaheadSchedule will rebuild
+    // next incrementLookaheadSchedule will rebuild the schedule starting at playTime/beatReal
+    const beatI = Math.floor(beatReal);
+    lastScheduledBeatI = beatI - ((beatI == beatReal) && 1);  // schedule _next_ beat, unless exactly at start of _this_ one
     lastScheduledTime = null;
-    lastScheduledBeatI = Math.floor(beatReal);
   }
+
+  const restart = () => {
+    console.log("restart");
+    scheduledNodeSet.forEach( x => {
+      console.log("stop", x);
+      x.stop();  // stop even already-playing notes
+    } );
+    startTime = audioCtx.currentTime;
+    beatReal = 0;
+    lastBeatI = -1;
+    lastScheduledBeatI = -1;
+    lastScheduledTime = null;
+    audioCtx.suspend();  // but still perhaps playing==true: if so, will resume in incrementLookaheadSchedule; ensures we schedule first beat!
+  }
+  restart();
 
   const scheduleForever = () => {
     incrementLookaheadSchedule();
@@ -259,20 +270,8 @@
     playing = !playing
     document.querySelector('#app-root').classList.toggle('playing',playing)
     console.log("playing",playing);
-  })
-  document.querySelector('#restart-button').addEventListener('click', () => {
-    console.log("restart");
-    scheduledNodeSet.forEach( x => {
-      console.log("stop", x);
-      x.stop();  // stop even already-playing notes
-    } );
-    startTime = audioCtx.currentTime;
-    lastScheduledBeatI = -1;
-    lastScheduledTime = null;
-    lastBeatI = -1;
-    beatReal = 0;
-    audioCtx.suspend();  // but still perhaps playing==true: if so, will resume in incrementLookaheadSchedule; ensures we schedule first beat!
-  })
+  });
+  document.querySelector('#restart-button').addEventListener('click', restart);
 
   const gainControl = document.querySelector('#gain-control');
   const gainInput = gainControl.querySelector('input');
