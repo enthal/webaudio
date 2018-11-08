@@ -13,18 +13,27 @@
       padding: 0.2em;
       background-color: #f7f7f7;
     }
-    #top-controls > * {
-      display: inline-block;
+    #top-controls *:not(.row) {
       background-color: #DDD;
       padding: 0 0.2em;
       border-radius: 10px;
     }
-    #top-controls > .button {
+    #top-controls .button {
       font-size: 300%;
     }
-    #top-controls > .value {
+    #top-controls .value {
       font-size: 200%;
       font-family: monospace;
+    }
+    #top-controls .control {
+      padding: 0.4em;
+    }
+    #top-controls .control > * {
+      display: block;
+      text-align: left;
+    }
+    #top-controls .control label {
+      padding-right: 1em
     }
 
     #play-stop-button:before { content: "▶︎"; }
@@ -45,19 +54,44 @@
     #beat-grid button.current.on {
       background-color: #FF3;
     }
+
+    .row > * {
+      display: inline-block;
+      margin-bottom: 0.2em;
+    }
   </style>
 </head>
 
 <body id=app-root>
 
   <div id=top-controls>
-    <div id=play-stop-button class=button></div>
-    <div id=restart-button   class=button></div>
-    <div id=beat-value class=value></div>
-    <div id=time-value class=value></div>
 
-    <label for="gain-input">Gain</label>
-    <input name="gain-input" id="gain-input" type="range" min="0" max="1" value=0.2 step="0.05" />
+    <div class=row>
+      <div id=play-stop-button class=button></div>
+      <div id=restart-button   class=button></div>
+      <div id=beat-value class=value></div>
+      <div id=time-value class=value></div>
+    </div>
+
+    <div class=row>
+
+      <div id="gain-control" class=control>
+        <div>
+          <label for="gain-input">Gain</label>
+          <span class=value>123</span>
+        </div>
+        <input name="gain-input" type="range" min="0" max="1" value=0.2 step="0.05" />
+      </div>
+
+      <div id="bpm-control" class=control>
+        <div>
+          <label for="bpm-input">BPM</label>
+          <span class=value>123</span>
+        </div>
+        <input name="bpm-input" type="range" min="1" max="240" value="120" step="1" />
+      </div>
+
+    </div>
   </div>
 
   <div id=beat-grid></div>
@@ -135,55 +169,61 @@
   let playing = false
   let bps = 160/60;
   const lookaheadDuration = 1
-  let startTime = audioCtx.currentTime
   const beatValueDomNode = document.querySelector('#beat-value');
   const timeValueDomNode = document.querySelector('#time-value');
 
   // C.f., https://www.html5rocks.com/en/tutorials/audio/scheduling/
-  let lookaheadBeatI = 0;  // lookahead beat
-  let lastCurrentBeatI = -1;
+  /*let*/ lastScheduleCallTime = audioCtx.currentTime;
   const incrementLookaheadSchedule = () => {
-    const playTime = audioCtx.currentTime - startTime;
-    const currentBeatI = Math.floor(playTime * bps);
-    if (lastCurrentBeatI !== currentBeatI) {
-      if (!(currentBeatI%8))  console.log("-- incrementLookaheadSchedule LOOP");
-      lastCurrentBeatI = currentBeatI;
-      // timeValueDomNode.innerText = playTime;
-      beatValueDomNode.innerText = currentBeatI;
-      timeValueDomNode.innerText = (currentBeatI / bps).toFixed(2);
+    const now = audioCtx.currentTime;
+    const playTime = now - startTime;
+    const beatI = Math.floor(beatReal);
+
+    if (lastBeatI !== beatI) {
+      if (!(beatI%8))  console.log("-- beatI LOOP", beatI%8, beatI);
+      lastBeatI = beatI;
+      beatValueDomNode.innerText = beatI;
+      timeValueDomNode.innerText = playTime.toFixed(2);
 
       // TODO: instead push beat events to consumers for update
       document.querySelectorAll('#beat-grid button.current')
         .forEach(x=>x.classList.remove('current'));
-      document.querySelectorAll(`#beat-grid button:nth-child(${ 1 + currentBeatI % stepCount })`)
+      document.querySelectorAll(`#beat-grid button:nth-child(${ 1 + beatI % stepCount })`)
         .forEach(x=>x.classList.add('current'));
 
-      // console.log("currentBeatI",currentBeatI);
+      console.log("beatI", beatI, playTime.toFixed(2));
     }
 
-    for (
-        let beatTime;
-        (beatTime = 1/bps * lookaheadBeatI)  <  playTime + lookaheadDuration;
-        lookaheadBeatI++
-    ) {
-      const scheduleTime = startTime + beatTime;
-      if (scheduleTime < audioCtx.currentTime)  continue;  // skip this beat if already begun
-      const stepI = lookaheadBeatI % stepCount;
+    let scheduleBeatI = lastScheduledBeatI;
+    for (;;) {
+      const beatPart = beatReal - beatI;
+      const scheduleTime = (lastScheduledTime == null)
+        ? playTime          + (beatPart && 1 - beatPart) / bps
+        : lastScheduledTime +                          1 / bps;
+      if (scheduleTime > playTime + lookaheadDuration)  break;
+      lastScheduledTime = scheduleTime;
+      lastScheduledBeatI = ++scheduleBeatI;
+
+      // SCHEDULE A BEAT!
+      const stepI = scheduleBeatI % stepCount;
       let scheduledCount = 0;
       drumNotes.forEach( (drumNote, drumI) => {
         if (grid[drumI][stepI]) {
-          scheduleOscillator(drumNote, scheduleTime);
+          scheduleOscillator(drumNote, startTime + scheduleTime);
           scheduledCount++;
         }
       });
       if (scheduledCount) {
-        console.log("scheduled", scheduledCount, stepI, lookaheadBeatI%4,
-          lookaheadBeatI, beatTime.toFixed(4), (playTime + lookaheadDuration).toFixed(4))
+        console.log("scheduled", scheduledCount, stepI, scheduleBeatI%4,
+          scheduleBeatI, beatReal.toFixed(4), (playTime + lookaheadDuration).toFixed(4))
       }
-      // console.log("schedule beat", stepI, lookaheadBeatI%4, lookaheadBeatI, beatTime, playTime, audioCtx.currentTime)
     }
 
     playing ? audioCtx.resume() : audioCtx.suspend();   // TODO: seems OK to call this every time, but...
+
+    beatReal += (now - lastScheduleCallTime) * bps;
+    lastScheduleCallTime = now;
+    // console.log("beatReal",beatReal);
   }
 
   resetLookaheadSchedule = () => {
@@ -198,8 +238,26 @@
       console.log(x.$startTime, stopped?"stop":"spare", +(x.$startTime - audioCtx.currentTime).toFixed(4), x);
     } );
 
-    lookaheadBeatI = lastCurrentBeatI;  // next incrementLookaheadSchedule will rebuild
+    // next incrementLookaheadSchedule will rebuild the schedule starting at playTime/beatReal
+    const beatI = Math.floor(beatReal);
+    lastScheduledBeatI = beatI - ((beatI == beatReal) && 1);  // schedule _next_ beat, unless exactly at start of _this_ one
+    lastScheduledTime = null;
   }
+
+  const restart = () => {
+    console.log("restart");
+    scheduledNodeSet.forEach( x => {
+      console.log("stop", x);
+      x.stop();  // stop even already-playing notes
+    } );
+    startTime = audioCtx.currentTime;
+    beatReal = 0;
+    lastBeatI = -1;
+    lastScheduledBeatI = -1;
+    lastScheduledTime = null;
+    audioCtx.suspend();  // but still perhaps playing==true: if so, will resume in incrementLookaheadSchedule; ensures we schedule first beat!
+  }
+  restart();
 
   const scheduleForever = () => {
     incrementLookaheadSchedule();
@@ -212,27 +270,31 @@
     playing = !playing
     document.querySelector('#app-root').classList.toggle('playing',playing)
     console.log("playing",playing);
-  })
-  document.querySelector('#restart-button').addEventListener('click', () => {
-    console.log("restart");
-    scheduledNodeSet.forEach( x => {
-      console.log("stop", x);
-      x.stop();  // stop even already-playing notes
-    } );
-    startTime = audioCtx.currentTime;
-    lookaheadBeatI = 0;
-    lastCurrentBeatI = -1;
-    audioCtx.suspend();  // but still perhaps playing==true: if so, will resume in incrementLookaheadSchedule; ensures we schedule first beat!
-  })
+  });
+  document.querySelector('#restart-button').addEventListener('click', restart);
 
-  const gainInput = document.querySelector('#gain-input');
+  const gainControl = document.querySelector('#gain-control');
+  const gainInput = gainControl.querySelector('input');
+  const gainValue = gainControl.querySelector('.value');
   const adjustGain = () => {
     console.log("gain", +gainInput.value);
     master.gain.linearRampToValueAtTime(+gainInput.value, audioCtx.currentTime + 0.01);
+    gainValue.innerText = (+gainInput.value).toFixed(2);
   }
   adjustGain();
   gainInput.addEventListener('input', adjustGain);
 
+  const bpmControl = document.querySelector('#bpm-control');
+  const bpmInput = bpmControl.querySelector('input');
+  const bpmValue = bpmControl.querySelector('.value');
+  const adjustBps = () => {
+    console.log("bpm", +bpmInput.value);
+    bps = +bpmInput.value / 60;
+    bpmValue.innerText = +bpmInput.value;
+    resetLookaheadSchedule();
+  }
+  adjustBps();
+  bpmInput.addEventListener('input', adjustBps);
 
   RUN();
 
