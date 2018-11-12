@@ -103,7 +103,9 @@
   const RUN = () => {
     const scheduler = makeScheduler();
     const master = makeMaster();
-    attachBeatGrid(scheduler, master);
+    const drums = [ 69-12, 69-7, 69 ]  // 69 == MIDI A4; 12 == octave note width;
+      .map( midiNote => makeSimpleOscillatorDrum(master, midiNote) );
+    attachBeatGrid(scheduler, drums);
   }
 
 
@@ -252,29 +254,28 @@
     return master;
   }
 
-  const attachBeatGrid = (scheduler, master) => {  // TODO: inject drumNotes as param (and then TODO from model)... behaviorally: extracting scheduleOscillator
+  const attachBeatGrid = (scheduler, drums) => {  // TODO: inject drums as param (and then TODO from model)... behaviorally: extracting scheduleOscillator
     const RUN = () => {
       renderBeatGrid();
       registerWithScheduler();
     }
 
-    const stepCount = 8;
-    const drumNotes = [ 69-12, 69-7, 69 ];  // 69 == MIDI A4; 12 == octave note width;   TODO: inject behaviorally: extracting scheduleOscillator
+    const beatCount = 8;
     const grid = [];
 
     const renderBeatGrid = () => {
-      drumNotes.forEach( (drumNote, drumI) => {
-        const drum = [];
-        grid.push(drum);
+      drums.forEach( (drum, drumI) => {
+        const drumBeats = [];
+        grid.push(drumBeats);
 
         const drumRow = document.createElement('div');
         document.querySelector('#beat-grid').appendChild( drumRow );
-        for (let stepI = 0; stepI < stepCount; stepI++) {
-          drum.push(false);
+        for (let beatI = 0; beatI < beatCount; beatI++) {
+          drumBeats.push(false);
           const button = document.createElement('button');
           button.addEventListener('click', () => {
-            drum[stepI] = !drum[stepI];
-            button.classList.toggle('on', drum[stepI]);
+            drumBeats[beatI] = !drumBeats[beatI];
+            button.classList.toggle('on', drumBeats[beatI]);
             scheduler.reset();
           });
           drumRow.appendChild(button);
@@ -284,39 +285,10 @@
 
     registerWithScheduler = () => {
       // TODO: removal
-      // TODO: or maybe: scheduler.addEventListener("schedule-beat", ()   ... BUT how to return values?
       scheduler.register({
 
-        scheduleBeat: (scheduleBeatI, startTime) => {
-          const stepI = scheduleBeatI % stepCount;
-
-          const scheduleOscillator = midiNote => {  // TODO: Inject this a drum
-            const duration = 1.0;
-            const oscillator = audioCtx.createOscillator();
-            oscillator.$startTime = startTime;  // dirty?  for later cancellation
-            // oscillator.type = 'triangle';
-            oscillator.frequency.value = freqForMidiNoteNumber(midiNote);
-            oscillator.start(startTime + 0.0);
-            oscillator.stop (startTime + duration*2);
-
-            const envelope = audioCtx.createGain();
-            envelope.gain.setValueAtTime               (0.0, startTime + 0);                 // initial
-            envelope.gain.linearRampToValueAtTime    (0.001, startTime + 0.00000001);        // exponentialRampToValueAtTime clicks if started from 0
-            envelope.gain.exponentialRampToValueAtTime (1.0, startTime + duration * 0.015);  // Attack
-            envelope.gain.exponentialRampToValueAtTime (0.3, startTime + duration * 0.4);    // Decay
-            envelope.gain.setValueAtTime               (0.3, startTime + duration * 0.8);    // Sustain
-            envelope.gain.linearRampToValueAtTime      (0.0, startTime + duration * 2.0);    // Release
-
-            oscillator.connect(envelope);
-            envelope.connect(master);
-
-            // console.log("schedule start", startTime, midiNote, audioCtx.currentTime, );
-            return oscillator;  // an AudioScheduledSourceNode, for lookahead management by scheduler
-          }
-
-          return drumNotes.map( (drumNote, drumI) =>
-            grid[drumI][stepI]  &&  scheduleOscillator(drumNote, startTime)
-          );
+        scheduleBeat: (beatI, startTime) => {
+          return drums.map( (drum, drumI) => grid[drumI][beatI % beatCount]  &&  drum(startTime) );
         },
 
         onBeat: beatI => {
@@ -325,7 +297,7 @@
           // TODO: keep beat buttons indexed by beat and use those, rather than using selectors? messy?
           document.querySelectorAll('#beat-grid button.current')
             .forEach(x => x.classList.remove('current'));
-          document.querySelectorAll(`#beat-grid button:nth-child(${ 1 + beatI % stepCount })`)
+          document.querySelectorAll(`#beat-grid button:nth-child(${ 1 + beatI % beatCount })`)
             .forEach(x => x.classList.add('current'));
         },
 
@@ -333,6 +305,32 @@
     }
 
     RUN();
+  }
+
+  const makeSimpleOscillatorDrum = (master, midiNote) => {
+    return startTime => {
+      const duration = 1.0;
+      const oscillator = audioCtx.createOscillator();
+      oscillator.$startTime = startTime;  // dirty?  for later cancellation
+      // oscillator.type = 'triangle';
+      oscillator.frequency.value = freqForMidiNoteNumber(midiNote);
+      oscillator.start(startTime + 0.0);
+      oscillator.stop (startTime + duration*2);
+
+      const envelope = audioCtx.createGain();  // TODO: don't create with each drum hit! Instead run each drum hit's oscillator instance through a shared ADSR gain envelope
+      envelope.gain.setValueAtTime               (0.0, startTime + 0);                 // initial
+      envelope.gain.linearRampToValueAtTime    (0.001, startTime + 0.00000001);        // exponentialRampToValueAtTime clicks if started from 0
+      envelope.gain.exponentialRampToValueAtTime (1.0, startTime + duration * 0.015);  // Attack
+      envelope.gain.exponentialRampToValueAtTime (0.3, startTime + duration * 0.4);    // Decay
+      envelope.gain.setValueAtTime               (0.3, startTime + duration * 0.8);    // Sustain
+      envelope.gain.linearRampToValueAtTime      (0.0, startTime + duration * 2.0);    // Release
+
+      oscillator.connect(envelope);
+      envelope.connect(master);
+
+      // console.log("schedule start", startTime, midiNote, audioCtx.currentTime, );
+      return oscillator;  // an AudioScheduledSourceNode, for lookahead management by scheduler
+    }
   }
 
 
