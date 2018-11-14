@@ -125,7 +125,7 @@
     /*let*/ lastScheduleCallTime = audioCtx.currentTime;
     const incrementLookaheadSchedule = () => {
       const now = audioCtx.currentTime;
-      const playTime = now - startTime;
+      const playTime = now - sessionStartTime;
       const beatI = Math.floor(beatReal);
 
       if (lastBeatI !== beatI) {
@@ -149,10 +149,10 @@
         lastScheduledTime = scheduleTime;
         lastScheduledBeatI = ++scheduleBeatI;
 
-        tellHandlers("scheduleBeat", scheduleBeatI, startTime + scheduleTime)  // returns an array of arrays of AudioScheduledSourceNode|falsey
+        tellHandlers("scheduleBeat", scheduleBeatI, sessionStartTime + scheduleTime)  // returns an array of arrays of AudioScheduledSourceNode|falsey
           .forEach(ax => ax && ax.forEach( x => {
             if (!x)  return;
-            x.$startTime = startTime + scheduleTime;  // dirty?  for later cancellation
+            x.$startTime = sessionStartTime + scheduleTime;  // dirty?  for later cancellation
             scheduledNodeSet.add(x);
             x.onended = () =>   // on stop/end by _any_ means
               scheduledNodeSet.delete(x);
@@ -192,7 +192,7 @@
       } );
 
       // TODO: unglobal (but allow debugging somehow)
-      startTime = audioCtx.currentTime;
+      sessionStartTime = audioCtx.currentTime;
       beatReal = 0;
       lastBeatI = -1;
       lastScheduledBeatI = -1;
