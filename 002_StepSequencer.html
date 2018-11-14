@@ -238,6 +238,7 @@
     }
   }
 
+
   const makeMaster = () => {
     const master = audioCtx.createGain();
     master.gain.value = 0.2;
@@ -257,6 +258,7 @@
 
     return master;
   }
+
 
   const attachBeatGrid = (scheduler, drums) => {  // TODO: inject drums as param (and then TODO from model)... behaviorally: extracting scheduleOscillator
     const RUN = () => {
@@ -311,6 +313,7 @@
     RUN();
   }
 
+
   const makeSimpleOscillatorDrum = (master, midiNote) => {
     return startTime => {
       const duration = 1.0;
@@ -320,7 +323,7 @@
       oscillator.start(startTime + 0.0);
       oscillator.stop (startTime + duration*2);
 
-      const envelope = audioCtx.createGain();  // TODO: don't create with each drum hit! Instead run each drum hit's oscillator instance through a shared ADSR gain envelope
+      const envelope = audioCtx.createGain();  // TODO: do these leak?  Unreachable after oscillator stops, though not disconnected.  When I tried to disconnect them thereafter, things gliched and swerved.  Why?
       envelope.gain.linearRampToValueAtTime      (0.0001, 0.000001);                   // initial
       envelope.gain.exponentialRampToValueAtTime (1.0, startTime + duration * 0.015);  // Attack
       envelope.gain.exponentialRampToValueAtTime (0.3, startTime + duration * 0.4);    // Decay
