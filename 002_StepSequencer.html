@@ -152,6 +152,7 @@
         tellHandlers("scheduleBeat", scheduleBeatI, startTime + scheduleTime)  // returns an array of arrays of AudioScheduledSourceNode|falsey
           .forEach(ax => ax && ax.forEach( x => {
             if (!x)  return;
+            x.$startTime = startTime + scheduleTime;  // dirty?  for later cancellation
             scheduledNodeSet.add(x);
             x.onended = () =>   // on stop/end by _any_ means
               scheduledNodeSet.delete(x);
@@ -189,11 +190,14 @@
         console.log("stop", x);
         x.stop();  // stop even already-playing notes
       } );
+
+      // TODO: unglobal (but allow debugging somehow)
       startTime = audioCtx.currentTime;
       beatReal = 0;
       lastBeatI = -1;
       lastScheduledBeatI = -1;
       lastScheduledTime = null;
+
       audioCtx.suspend();  // but still perhaps playing==true: if so, will resume in incrementLookaheadSchedule; ensures we schedule first beat!
     }
     restart();
@@ -311,19 +315,17 @@
     return startTime => {
       const duration = 1.0;
       const oscillator = audioCtx.createOscillator();
-      oscillator.$startTime = startTime;  // dirty?  for later cancellation
       // oscillator.type = 'triangle';
       oscillator.frequency.value = freqForMidiNoteNumber(midiNote);
       oscillator.start(startTime + 0.0);
       oscillator.stop (startTime + duration*2);
 
       const envelope = audioCtx.createGain();  // TODO: don't create with each drum hit! Instead run each drum hit's oscillator instance through a shared ADSR gain envelope
-      envelope.gain.setValueAtTime               (0.0, startTime + 0);                 // initial
-      envelope.gain.linearRampToValueAtTime    (0.001, startTime + 0.00000001);        // exponentialRampToValueAtTime clicks if started from 0
+      envelope.gain.linearRampToValueAtTime      (0.0001, 0.000001);                   // initial
       envelope.gain.exponentialRampToValueAtTime (1.0, startTime + duration * 0.015);  // Attack
       envelope.gain.exponentialRampToValueAtTime (0.3, startTime + duration * 0.4);    // Decay
       envelope.gain.setValueAtTime               (0.3, startTime + duration * 0.8);    // Sustain
-      envelope.gain.linearRampToValueAtTime      (0.0, startTime + duration * 2.0);    // Release
+      envelope.gain.linearRampToValueAtTime      (0.0001, startTime + duration * 2.0); // Release
 
       oscillator.connect(envelope);
       envelope.connect(master);
