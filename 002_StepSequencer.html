@@ -152,7 +152,7 @@
         tellHandlers("scheduleBeat", scheduleBeatI, startTime + scheduleTime)  // returns an array of arrays of AudioScheduledSourceNode|falsey
           .forEach(ax => ax && ax.forEach( x => {
             if (!x)  return;
-            x.$startTime = startTime;  // dirty?  for later cancellation
+            x.$startTime = startTime + scheduleTime;  // dirty?  for later cancellation
             scheduledNodeSet.add(x);
             x.onended = () =>   // on stop/end by _any_ means
               scheduledNodeSet.delete(x);
@@ -309,26 +309,33 @@
   }
 
   const makeSimpleOscillatorDrum = (master, midiNote) => {
+    const envelope = audioCtx.createGain();
+    envelope.gain.setValueAtTime(0,0);
+    envelope.gain.linearRampToValueAtTime(0.0001, 0.000001);
+    envelope.connect(master);
+
+    const oscillator = audioCtx.createOscillator();
+    oscillator.frequency.value = freqForMidiNoteNumber(midiNote);
+    oscillator.start(0);
+    oscillator.connect(envelope);
+
     return startTime => {
       const duration = 1.0;
-      const oscillator = audioCtx.createOscillator();
-      // oscillator.type = 'triangle';
-      oscillator.frequency.value = freqForMidiNoteNumber(midiNote);
-      oscillator.start(startTime + 0.0);
-      oscillator.stop (startTime + duration*2);
 
-      const envelope = audioCtx.createGain();  // TODO: don't create with each drum hit! Instead run each drum hit's oscillator instance through a shared ADSR gain envelope
-      envelope.gain.linearRampToValueAtTime      (0.0001, 0.000001);                   // initial
+      envelope.gain.cancelAndHoldAtTime        (     startTime );   // TODO: only works on chrome now?!  Well no, not on Chrome either: ramps (gradually) from last event time, not (quickly on attack) from hold time.   In any case assumes only forward motion in scheduling time
+      // envelope.gain.cancelScheduledValues        (     startTime );   // Assumes only forward motion in scheduling time
+
+      // envelope.gain.setTargetAtTime        (0.0001,     startTime, 0.1 );   // Assumes only forward motion in scheduling time
+      // envelope.gain.exponentialRampToValueAtTime        (0.0001,     startTime );   // Assumes only forward motion in scheduling time
+      // envelope.gain.linearRampToValueAtTime      (0.0001, startTime);
+
       envelope.gain.exponentialRampToValueAtTime (1.0, startTime + duration * 0.015);  // Attack
       envelope.gain.exponentialRampToValueAtTime (0.3, startTime + duration * 0.4);    // Decay
       envelope.gain.setValueAtTime               (0.3, startTime + duration * 0.8);    // Sustain
       envelope.gain.linearRampToValueAtTime      (0.0001, startTime + duration * 2.0); // Release
 
-      oscillator.connect(envelope);
-      envelope.connect(master);
-
       // console.log("schedule start", startTime, midiNote, audioCtx.currentTime, );
-      return oscillator;  // an AudioScheduledSourceNode, for lookahead management by scheduler
+      // return oscillator;  // an AudioScheduledSourceNode, for lookahead management by scheduler
     }
   }
 
