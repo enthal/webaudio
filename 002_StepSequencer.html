@@ -202,6 +202,8 @@
       register: handler => handlers.add(handler),
       setPlaying: x  => playing = x,  // TODO: prefer getter/setter?
       getPlaying: () => playing,
+      set playing(x) { return playing = x; },
+      get playing() { return playing; },
       restart,
       reset: resetLookaheadSchedule,
     }
@@ -226,24 +228,24 @@
 
 
   const attachTopControls = (scheduler, master) => {
-    let beatEl, timeEl, playPauseButtonEl, restartButtonEl;
+    const controls = {};
     el.select('.tip-top-todo', [
-      playPauseButtonEl   = el('.control.button.play-pause-button'),
-      restartButtonEl     = el('.control.button.restart-button'),
-      beatEl              = el('.control.value'),
-      timeEl              = el('.control.value'),
+      controls.playPauseButton   = el('.control.button.play-pause-button'),
+      controls.restartButton     = el('.control.button.restart-button'),
+      controls.beatView          = el('.control.value'),
+      controls.timeView          = el('.control.value'),
     ]);
 
-    playPauseButtonEl.addEventListener('click', () => {
-      scheduler.setPlaying(!scheduler.getPlaying());
-      document.querySelector('#app-root').classList.toggle('playing',scheduler.getPlaying())
-      console.log("playing",scheduler.getPlaying());
+    controls.playPauseButton.addEventListener('click', () => {
+      scheduler.playing = !scheduler.playing;
+      document.querySelector('#app-root').classList.toggle('playing',scheduler.playing)
+      console.log("playing",scheduler.playing);
     });
-    restartButtonEl.addEventListener('click', scheduler.restart);
+    controls.restartButton.addEventListener('click', scheduler.restart);
 
     scheduler.register({ onBeat: (beatI, playTime) => {
-      beatEl.innerText = beatI;
-      timeEl.innerText = playTime.toFixed(2);
+      controls.beatView.innerText = beatI;
+      controls.timeView.innerText = playTime.toFixed(1);
     } });
   }
 
