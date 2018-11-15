@@ -71,13 +71,7 @@
 
 <body id=app-root>
 
-  <div id=top-controls>
-
-    <div class="row tip-top-todo">
-    </div>
-
-    <div id=range-controls class=row></div>
-  </div>
+  <div id=top-controls></div>
 
   <div id=beat-grid></div>
 </div>
@@ -98,6 +92,8 @@
 
 
   const makeScheduler = () => {
+    audioCtx.suspend();
+
     const scheduledNodeSet = new Set;
     const handlers = new Set;
     const tellHandlers = (type, ...args) =>
@@ -190,20 +186,16 @@
     window.requestAnimationFrame(scheduleForever)  // https://www.html5rocks.com/en/tutorials/audio/scheduling/
 
 
-    audioCtx.suspend();
-
-    el.select('#range-controls', [
-      makeRangeControl('bpm', "BPM", { min:10, max:240, value:120, step:1 },
-        v => { bps = v/60; return v; } ),
-    ])
-
     // Interface
     return {
       register: handler => handlers.add(handler),
-      setPlaying: x  => playing = x,  // TODO: prefer getter/setter?
-      getPlaying: () => playing,
-      set playing(x) { return playing = x; },
-      get playing() { return playing; },
+      get playing()  { return playing; },
+      set playing(x) { playing = x; },
+      get bpm()  { return bps*60; },
+      set bpm(x) {
+        bps = x/60;
+        resetLookaheadSchedule();
+      },
       restart,
       reset: resetLookaheadSchedule,
     }
@@ -214,31 +206,35 @@
     const master = audioCtx.createGain();
     master.gain.value = 0.2;
     master.connect(audioCtx.destination);
-
-    el.select('#range-controls', [
-      makeRangeControl('gain', "Gain", { min:0.0, max:1.0, value:0.2, step:0.05 },
-        v => {
-          master.gain.linearRampToValueAtTime(v, audioCtx.currentTime + 0.01);
-          return v.toFixed(2);
-        } ),
-    ])
-
     return master;
   }
 
 
   const attachTopControls = (scheduler, master) => {
     const controls = {};
-    el.select('.tip-top-todo', [
-      controls.playPauseButton   = el('.control.button.play-pause-button'),
-      controls.restartButton     = el('.control.button.restart-button'),
-      controls.beatView          = el('.control.value'),
-      controls.timeView          = el('.control.value'),
+    const top = el.select('#top-controls', [
+      el('.row', [
+        controls.playPauseButton   = el('.control.button.play-pause-button'),
+        controls.restartButton     = el('.control.button.restart-button'),
+        controls.beatView          = el('.control.value'),
+        controls.timeView          = el('.control.value'),
+      ]),
+      el('.row', [
+        makeRangeControl( 'bpm', "BPM",
+          { min:10, max:240, value:120, step:1 },
+          v => scheduler.bpm = v ),
+        makeRangeControl( 'gain', "Gain",
+          { min:0.0, max:1.0, value:0.2, step:0.05 },
+          v => {
+            master.gain.linearRampToValueAtTime(v, audioCtx.currentTime + 0.01);
+            return v.toFixed(2);
+          } ),
+      ]),
     ]);
 
     controls.playPauseButton.addEventListener('click', () => {
       scheduler.playing = !scheduler.playing;
-      document.querySelector('#app-root').classList.toggle('playing',scheduler.playing)
+      top.classList.toggle('playing',scheduler.playing);
       console.log("playing",scheduler.playing);
     });
     controls.restartButton.addEventListener('click', scheduler.restart);
@@ -247,6 +243,7 @@
       controls.beatView.innerText = beatI;
       controls.timeView.innerText = playTime.toFixed(1);
     } });
+
   }
 
 
