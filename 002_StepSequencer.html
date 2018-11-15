@@ -13,32 +13,39 @@
       padding: 0.2em;
       background-color: #f7f7f7;
     }
-    #top-controls *:not(.row) {
+
+    .control {
       background-color: #DDD;
       padding: 0 0.2em;
+      margin: 4px;
       border-radius: 10px;
     }
-    #top-controls .button {
+    .control.button {
       font-size: 300%;
     }
-    #top-controls .value {
+    .control.value {
       font-size: 200%;
       font-family: monospace;
     }
-    #top-controls .control {
+
+    .control.range-control {
       padding: 0.4em;
     }
-    #top-controls .control > * {
+    .control.range-control > * {
       display: block;
       text-align: left;
     }
-    #top-controls .control label {
-      padding-right: 1em
+    .control.range-control label {
+      padding-right: 1em;
+    }
+    .control.range-control .value {
+      font-size: 150%;
+      font-family: monospace;
     }
 
-    #play-pause-button:before { content: "▶︎"; }
-    .playing #play-pause-button:before { content: "||"; }
-    #restart-button:before { content: "⎌"; }
+    .play-pause-button:before { content: "▶︎"; }
+    .playing .play-pause-button:before { content: "||"; }
+    .restart-button:before { content: "⎌"; }
 
     #beat-grid button {
       background-color: #444;
@@ -66,11 +73,7 @@
 
   <div id=top-controls>
 
-    <div class=row>
-      <div id=play-pause-button class=button></div>
-      <div id=restart-button   class=button></div>
-      <div id=beat-value class=value></div>
-      <div id=time-value class=value></div>
+    <div class="row tip-top-todo">
     </div>
 
     <div id=range-controls class=row></div>
@@ -85,6 +88,9 @@
   const RUN = () => {
     const scheduler = makeScheduler();
     const master = makeMaster();
+
+    attachTopControls(scheduler, master);
+
     const drums = [ 69-12, 69-7, 69 ]  // 69 == MIDI A4; 12 == octave note width;
       .map( midiNote => makeSimpleOscillatorDrum(master, midiNote) );
     attachBeatGrid(scheduler, drums);
@@ -100,8 +106,6 @@
     let playing = false;
     let bps = 160/60;
     const lookaheadDuration = 1;
-    const beatValueDomNode = document.querySelector('#beat-value');  // TODO: MOVE!!
-    const timeValueDomNode = document.querySelector('#time-value');  // TODO: MOVE!!
 
     // C.f., https://www.html5rocks.com/en/tutorials/audio/scheduling/
     /*let*/ lastScheduleCallTime = audioCtx.currentTime;
@@ -112,12 +116,7 @@
 
       if (lastBeatI !== beatI) {
         lastBeatI = beatI;
-
-        // TODO: MOVE!!
-        beatValueDomNode.innerText = beatI;
-        timeValueDomNode.innerText = playTime.toFixed(2);
-
-        tellHandlers("onBeat", beatI);
+        tellHandlers("onBeat", beatI, playTime);
         console.log("beatI", beatI, playTime.toFixed(2));
       }
 
@@ -192,20 +191,18 @@
 
 
     audioCtx.suspend();
-    document.querySelector('#play-pause-button').addEventListener('click', () => {
-      playing = !playing
-      document.querySelector('#app-root').classList.toggle('playing',playing)
-      console.log("playing",playing);
-    });
-    document.querySelector('#restart-button').addEventListener('click', restart);
 
     el.select('#range-controls', [
       makeRangeControl('bpm', "BPM", { min:10, max:240, value:120, step:1 },
         v => { bps = v/60; return v; } ),
     ])
 
+    // Interface
     return {
       register: handler => handlers.add(handler),
+      setPlaying: x  => playing = x,  // TODO: prefer getter/setter?
+      getPlaying: () => playing,
+      restart,
       reset: resetLookaheadSchedule,
     }
   }
@@ -227,9 +224,33 @@
     return master;
   }
 
+
+  const attachTopControls = (scheduler, master) => {
+    let beatEl, timeEl, playPauseButtonEl, restartButtonEl;
+    el.select('.tip-top-todo', [
+      playPauseButtonEl   = el('.control.button.play-pause-button'),
+      restartButtonEl     = el('.control.button.restart-button'),
+      beatEl              = el('.control.value'),
+      timeEl              = el('.control.value'),
+    ]);
+
+    playPauseButtonEl.addEventListener('click', () => {
+      scheduler.setPlaying(!scheduler.getPlaying());
+      document.querySelector('#app-root').classList.toggle('playing',scheduler.getPlaying())
+      console.log("playing",scheduler.getPlaying());
+    });
+    restartButtonEl.addEventListener('click', scheduler.restart);
+
+    scheduler.register({ onBeat: (beatI, playTime) => {
+      beatEl.innerText = beatI;
+      timeEl.innerText = playTime.toFixed(2);
+    } });
+  }
+
+
   const makeRangeControl = (name, label, attrs, handleChange) => {
     let inputEl, valueEl;
-    const r = el(`#${name}-control.control`, [
+    const r = el(`.control.range-control`, [
       el('', [
         el('label', { for:name }, [ label ]),
         valueEl = el('span.value'),
@@ -252,7 +273,7 @@
   }
 
 
-  const attachBeatGrid = (scheduler, drums) => {  // TODO: inject drums as param (and then TODO from model)... behaviorally: extracting scheduleOscillator
+  const attachBeatGrid = (scheduler, drums) => {
     const RUN = () => {
       renderBeatGrid();
       registerWithScheduler();
