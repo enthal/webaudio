@@ -376,36 +376,6 @@
     return what;
   }
 
-  const pl = document.querySelector('#playground');
-  [
-    '',
-    'button',
-    '#bpm-control',
-    '.control',
-    '#bpm-control.control',
-    'code#bpm-control.control',
-    'code#bpm-control.control.thingy',
-  ].map(x => pl.appendChild(el(x)))
-  el(pl, [el('himom', {snort:123})])
-  el(pl, [el('hidad', [el('ok', {hmm:'yes'})])])
-  el(pl, [el('hikid', {gorf:'bob'}, [el('noway', {hmm:'yes'}), 'textola', el('')])])
-
-  if(0) {
-    // thinking out loud; an imagined evolution on https://gist.github.com/jonathantneal/7935589
-    H.e(H.s('#beat-grid'), drumNotes.map((drumNote, drumI) => {
-      const drum = [];
-      grid.push(drum);
-      return H.n(stepCount, stepI => {
-        drum.push(false);
-        H.e('button', button => {click: () => {
-          drum[stepI] = !drum[stepI];
-          H.cl(button, 'on', drum[stepI]);
-          resetLookaheadSchedule();
-        }})
-      })
-    }))
-  }
-
 
   // "Globals"
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();  // TODO: by browser policy, must (I THINK!) be created in a click handler or all audio is muted (ok for now on desktop Chrome, but to change in next Chrome release)
