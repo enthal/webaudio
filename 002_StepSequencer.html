@@ -73,29 +73,10 @@
       <div id=time-value class=value></div>
     </div>
 
-    <div class=row>
-
-      <div id="gain-control" class=control>
-        <div>
-          <label for="gain-input">Gain</label>
-          <span class=value>123</span>
-        </div>
-        <input name="gain-input" type="range" min="0" max="1" value=0.2 step="0.05" />
-      </div>
-
-      <div id="bpm-control" class=control>
-        <div>
-          <label for="bpm-input">BPM</label>
-          <span class=value>123</span>
-        </div>
-        <input name="bpm-input" type="range" min="1" max="240" value="120" step="1" />
-      </div>
-
-    </div>
+    <div id=range-controls class=row></div>
   </div>
 
   <div id=beat-grid></div>
-  <div id=playground></div>
 </div>
 </body>
 
@@ -218,20 +199,10 @@
     });
     document.querySelector('#restart-button').addEventListener('click', restart);
 
-
-    // TODO: refactor: extract a component or whatever
-    const bpmControl = document.querySelector('#bpm-control');
-    const bpmInput = bpmControl.querySelector('input');
-    const bpmValue = bpmControl.querySelector('.value');
-    const adjustBps = () => {
-      console.log("bpm", +bpmInput.value);
-      bps = +bpmInput.value / 60;
-      bpmValue.innerText = +bpmInput.value;
-      resetLookaheadSchedule();
-    }
-    adjustBps();
-    bpmInput.addEventListener('input', adjustBps);
-
+    el.select('#range-controls', [
+      makeRangeControl('bpm', "BPM", { min:10, max:240, value:120, step:1 },
+        v => { bps = v/60; return v; } ),
+    ])
 
     return {
       register: handler => handlers.add(handler),
@@ -245,24 +216,39 @@
     master.gain.value = 0.2;
     master.connect(audioCtx.destination);
 
-    // TODO: refactor: extract a component or whatever
-    const gainControl = document.querySelector('#gain-control');
-    const gainInput = gainControl.querySelector('input');
-    const gainValue = gainControl.querySelector('.value');
-    const adjustGain = () => {
-      console.log("gain", +gainInput.value);
-      master.gain.linearRampToValueAtTime(+gainInput.value, audioCtx.currentTime + 0.01);
-      gainValue.innerText = (+gainInput.value).toFixed(2);
-    }
-    adjustGain();
-    gainInput.addEventListener('input', adjustGain);
+    el.select('#range-controls', [
+      makeRangeControl('gain', "Gain", { min:0.0, max:1.0, value:0.2, step:0.05 },
+        v => {
+          master.gain.linearRampToValueAtTime(v, audioCtx.currentTime + 0.01);
+          return v.toFixed(2);
+        } ),
+    ])
 
     return master;
   }
 
-  const makeRangeControl = domNode => {
-    el('#bpm-control.control')
-    el('div', { id:'bpm-control', class:'control' })
+  const makeRangeControl = (name, label, attrs, handleChange) => {
+    let inputEl, valueEl;
+    const r = el(`#${name}-control.control`, [
+      el('', [
+        el('label', { for:name }, [ label ]),
+        valueEl = el('span.value'),
+      ]),
+      inputEl = el('input', { type:'range', name, ...attrs })
+    ])
+    // console.log("inputEl.value",inputEl.value);
+
+    const onRealChange = () => {
+      makeChange(+inputEl.value);  // Chrome/webkit bug?: inputEl.value integer before attached to DOM, wtf
+    }
+    const makeChange = v => {
+      console.log('range control change:', name, v);
+      valueEl.innerText = handleChange(v);
+    }
+    makeChange(attrs.value);
+    inputEl.addEventListener('input', onRealChange);
+
+    return r;
   }
 
 
@@ -346,6 +332,8 @@
 
 
   const el = (what, attrs, children) => {
+    // Simple mechanism for defining DOM programatically
+
     if (typeof what === 'string') {
       const m = what.match(  /^([\w-_]+)?(#[\w-_]*)?((?:.[\w-_]+)+)?$/  );
       if (!m)  throw new Error("Can't make elem from string: "+what)
@@ -361,7 +349,6 @@
         children = attrs;
         attrs = null;
       } else {
-        console.log(attrs);
         Object.entries(attrs).forEach(([k,v]) => what.setAttribute(k,v));
       }
     }
@@ -375,6 +362,7 @@
 
     return what;
   }
+  el.select = (selector, ...a) => el(document.querySelector(selector), ...a);
 
 
   // "Globals"
