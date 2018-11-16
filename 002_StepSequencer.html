@@ -279,44 +279,46 @@
     }
 
     const beatCount = 8;
-    const grid = [];
+
+    const grid = drums.map( () =>
+      [...Array(beatCount).keys()].map(() => false) );
+
+    const buttonsPerBeat = [...Array(beatCount).keys()].map( () => [] );
 
     const renderBeatGrid = () => {
-      drums.forEach( (drum, drumI) => {
-        const drumBeats = [];
-        grid.push(drumBeats);
-
-        const drumRow = document.createElement('div');
-        document.querySelector('#beat-grid').appendChild( drumRow );
-        for (let beatI = 0; beatI < beatCount; beatI++) {
-          drumBeats.push(false);
-          const button = document.createElement('button');
-          button.addEventListener('click', () => {
-            drumBeats[beatI] = !drumBeats[beatI];
-            button.classList.toggle('on', drumBeats[beatI]);
-            scheduler.reset();
+      el.select('#beat-grid', grid.map( drumBeats =>
+        el('.beat-row', drumBeats.map( (v, beatI) => {
+          const button = el('button', {
+            click: () => {
+              drumBeats[beatI] = !drumBeats[beatI];
+              button.classList.toggle('on', drumBeats[beatI]);
+              scheduler.reset();
+            }
           });
-          drumRow.appendChild(button);
-        }
-      })
+          buttonsPerBeat[beatI].push(button);
+          return button
+        } ))
+      ))
     }
 
-    registerWithScheduler = () => {
-      // TODO: removal
+    const registerWithScheduler = () => {
+      // TODO: unregister on destruction
       scheduler.register({
 
-        scheduleBeat: (beatI, startTime) => {
-          return drums.map( (drum, drumI) => grid[drumI][beatI % beatCount]  &&  drum(startTime) );
+        scheduleBeat: (beatI, scheduleTime) => {
+          return drums.map( (drum, drumI) => grid[drumI][beatI % beatCount]  &&  drum(scheduleTime) );
         },
 
         onBeat: beatI => {
           if (!(beatI%8))  console.log("-- beatI LOOP", beatI%8, beatI);
 
-          // TODO: keep beat buttons indexed by beat and use those, rather than using selectors? messy?
-          document.querySelectorAll('#beat-grid button.current')
-            .forEach(x => x.classList.remove('current'));
-          document.querySelectorAll(`#beat-grid button:nth-child(${ 1 + beatI % beatCount })`)
-            .forEach(x => x.classList.add('current'));
+          buttonsPerBeat.forEach( buttons =>
+            buttons.forEach( button =>
+              button.classList.remove('current') ) );
+
+          buttonsPerBeat[beatI % beatCount]
+            .forEach( button =>
+              button.classList.add('current') );
         },
 
       });
@@ -369,7 +371,11 @@
         children = attrs;
         attrs = null;
       } else {
-        Object.entries(attrs).forEach(([k,v]) => what.setAttribute(k,v));
+        Object.entries(attrs).forEach( ([k,v]) =>
+          typeof v === 'function'
+            ? what.addEventListener (k,v)
+            : what.setAttribute     (k,v)
+          );
       }
     }
 
