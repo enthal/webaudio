@@ -19,12 +19,19 @@
       padding: 0 0.2em;
       margin: 4px;
       border-radius: 10px;
+      display: inline-block;
     }
     .control.button {
       font-size: 300%;
+      width: 1em;
+      height: 1.2em;
     }
     .control.value {
-      font-size: 200%;
+      padding: 0.3em;
+      text-align: left;
+    }
+    .control.value .value-text {
+      font-size: 150%;
       font-family: monospace;
     }
 
@@ -41,6 +48,12 @@
     .control.range-control .value {
       font-size: 150%;
       font-family: monospace;
+    }
+
+    .control label {
+      font-size: 80%;
+      color: #555;
+      font-weight: 100;
     }
 
     .play-pause-button:before { content: "▶︎"; }
@@ -63,8 +76,7 @@
     }
 
     .row > * {
-      display: inline-block;
-      margin-bottom: 0.2em;
+      vertical-align: middle;
     }
   </style>
 </head>
@@ -212,12 +224,18 @@
 
   const attachTopControls = (scheduler, master) => {
     const controls = {};
+    const playPause = () => {
+      scheduler.playing = !scheduler.playing;
+      top.classList.toggle('playing',scheduler.playing);
+      console.log("playing",scheduler.playing);
+    };
+
     const top = el.select('#top-controls', [
       el('.row', [
-        controls.playPauseButton   = el('.control.button.play-pause-button'),
-        controls.restartButton     = el('.control.button.restart-button'),
-        controls.beatView          = el('.control.value'),
-        controls.timeView          = el('.control.value'),
+        controls.playPauseButton   = el('.control.button.play-pause-button', { click:playPause } ),
+        controls.restartButton     = el('.control.button.restart-button',    { click:scheduler.restart } ),
+        controls.beatView          = makeValueControl("Beat"),
+        controls.timeView          = makeValueControl("Time"),
       ]),
       el('.row', [
         makeRangeControl( 'bpm', "BPM",
@@ -232,20 +250,23 @@
       ]),
     ]);
 
-    controls.playPauseButton.addEventListener('click', () => {
-      scheduler.playing = !scheduler.playing;
-      top.classList.toggle('playing',scheduler.playing);
-      console.log("playing",scheduler.playing);
-    });
-    controls.restartButton.addEventListener('click', scheduler.restart);
-
     scheduler.register({ onBeat: (beatI, playTime) => {
-      controls.beatView.innerText = beatI;
-      controls.timeView.innerText = playTime.toFixed(1);
+      controls.beatView.setValue(beatI);
+      controls.timeView.setValue(playTime.toFixed(1));
     } });
 
   }
 
+
+  const makeValueControl = label => {
+    let valueEl;
+    const r = el(`.control.value`, [
+      el('label', [ label ]),
+      valueEl = el('.value-text'),
+    ]);
+    r.setValue = v => valueEl.innerText = v;
+    return r;
+  }
 
   const makeRangeControl = (name, label, attrs, handleChange) => {
     let inputEl, valueEl;
