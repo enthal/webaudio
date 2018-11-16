@@ -13,32 +13,39 @@
       padding: 0.2em;
       background-color: #f7f7f7;
     }
-    #top-controls *:not(.row) {
+
+    .control {
       background-color: #DDD;
       padding: 0 0.2em;
+      margin: 4px;
       border-radius: 10px;
     }
-    #top-controls .button {
+    .control.button {
       font-size: 300%;
     }
-    #top-controls .value {
+    .control.value {
       font-size: 200%;
       font-family: monospace;
     }
-    #top-controls .control {
+
+    .control.range-control {
       padding: 0.4em;
     }
-    #top-controls .control > * {
+    .control.range-control > * {
       display: block;
       text-align: left;
     }
-    #top-controls .control label {
-      padding-right: 1em
+    .control.range-control label {
+      padding-right: 1em;
+    }
+    .control.range-control .value {
+      font-size: 150%;
+      font-family: monospace;
     }
 
-    #play-pause-button:before { content: "▶︎"; }
-    .playing #play-pause-button:before { content: "||"; }
-    #restart-button:before { content: "⎌"; }
+    .play-pause-button:before { content: "▶︎"; }
+    .playing .play-pause-button:before { content: "||"; }
+    .restart-button:before { content: "⎌"; }
 
     #beat-grid button {
       background-color: #444;
@@ -64,35 +71,7 @@
 
 <body id=app-root>
 
-  <div id=top-controls>
-
-    <div class=row>
-      <div id=play-pause-button class=button></div>
-      <div id=restart-button   class=button></div>
-      <div id=beat-value class=value></div>
-      <div id=time-value class=value></div>
-    </div>
-
-    <div class=row>
-
-      <div id="gain-control" class=control>
-        <div>
-          <label for="gain-input">Gain</label>
-          <span class=value>123</span>
-        </div>
-        <input name="gain-input" type="range" min="0" max="1" value=0.2 step="0.05" />
-      </div>
-
-      <div id="bpm-control" class=control>
-        <div>
-          <label for="bpm-input">BPM</label>
-          <span class=value>123</span>
-        </div>
-        <input name="bpm-input" type="range" min="1" max="240" value="120" step="1" />
-      </div>
-
-    </div>
-  </div>
+  <div id=top-controls></div>
 
   <div id=beat-grid></div>
 </div>
@@ -103,6 +82,9 @@
   const RUN = () => {
     const scheduler = makeScheduler();
     const master = makeMaster();
+
+    attachTopControls(scheduler, master);
+
     const drums = [ 69-12, 69-7, 69 ]  // 69 == MIDI A4; 12 == octave note width;
       .map( midiNote => makeSimpleOscillatorDrum(master, midiNote) );
     attachBeatGrid(scheduler, drums);
@@ -110,6 +92,8 @@
 
 
   const makeScheduler = () => {
+    audioCtx.suspend();
+
     const scheduledNodeSet = new Set;
     const handlers = new Set;
     const tellHandlers = (type, ...args) =>
@@ -118,8 +102,6 @@
     let playing = false;
     let bps = 160/60;
     const lookaheadDuration = 1;
-    const beatValueDomNode = document.querySelector('#beat-value');  // TODO: MOVE!!
-    const timeValueDomNode = document.querySelector('#time-value');  // TODO: MOVE!!
 
     // C.f., https://www.html5rocks.com/en/tutorials/audio/scheduling/
     /*let*/ lastScheduleCallTime = audioCtx.currentTime;
@@ -130,12 +112,7 @@
 
       if (lastBeatI !== beatI) {
         lastBeatI = beatI;
-
-        // TODO: MOVE!!
-        beatValueDomNode.innerText = beatI;
-        timeValueDomNode.innerText = playTime.toFixed(2);
-
-        tellHandlers("onBeat", beatI);
+        tellHandlers("onBeat", beatI, playTime);
         console.log("beatI", beatI, playTime.toFixed(2));
       }
 
@@ -209,31 +186,17 @@
     window.requestAnimationFrame(scheduleForever)  // https://www.html5rocks.com/en/tutorials/audio/scheduling/
 
 
-    audioCtx.suspend();
-    document.querySelector('#play-pause-button').addEventListener('click', () => {
-      playing = !playing
-      document.querySelector('#app-root').classList.toggle('playing',playing)
-      console.log("playing",playing);
-    });
-    document.querySelector('#restart-button').addEventListener('click', restart);
-
-
-    // TODO: refactor: extract a component or whatever
-    const bpmControl = document.querySelector('#bpm-control');
-    const bpmInput = bpmControl.querySelector('input');
-    const bpmValue = bpmControl.querySelector('.value');
-    const adjustBps = () => {
-      console.log("bpm", +bpmInput.value);
-      bps = +bpmInput.value / 60;
-      bpmValue.innerText = +bpmInput.value;
-      resetLookaheadSchedule();
-    }
-    adjustBps();
-    bpmInput.addEventListener('input', adjustBps);
-
-
+    // Interface
     return {
       register: handler => handlers.add(handler),
+      get playing()  { return playing; },
+      set playing(x) { playing = x; },
+      get bpm()  { return bps*60; },
+      set bpm(x) {
+        bps = x/60;
+        resetLookaheadSchedule();
+      },
+      restart,
       reset: resetLookaheadSchedule,
     }
   }
@@ -243,68 +206,119 @@
     const master = audioCtx.createGain();
     master.gain.value = 0.2;
     master.connect(audioCtx.destination);
-
-    // TODO: refactor: extract a component or whatever
-    const gainControl = document.querySelector('#gain-control');
-    const gainInput = gainControl.querySelector('input');
-    const gainValue = gainControl.querySelector('.value');
-    const adjustGain = () => {
-      console.log("gain", +gainInput.value);
-      master.gain.linearRampToValueAtTime(+gainInput.value, audioCtx.currentTime + 0.01);
-      gainValue.innerText = (+gainInput.value).toFixed(2);
-    }
-    adjustGain();
-    gainInput.addEventListener('input', adjustGain);
-
     return master;
   }
 
 
-  const attachBeatGrid = (scheduler, drums) => {  // TODO: inject drums as param (and then TODO from model)... behaviorally: extracting scheduleOscillator
+  const attachTopControls = (scheduler, master) => {
+    const controls = {};
+    const top = el.select('#top-controls', [
+      el('.row', [
+        controls.playPauseButton   = el('.control.button.play-pause-button'),
+        controls.restartButton     = el('.control.button.restart-button'),
+        controls.beatView          = el('.control.value'),
+        controls.timeView          = el('.control.value'),
+      ]),
+      el('.row', [
+        makeRangeControl( 'bpm', "BPM",
+          { min:10, max:240, value:120, step:1 },
+          v => scheduler.bpm = v ),
+        makeRangeControl( 'gain', "Gain",
+          { min:0.0, max:1.0, value:0.2, step:0.05 },
+          v => {
+            master.gain.linearRampToValueAtTime(v, audioCtx.currentTime + 0.01);
+            return v.toFixed(2);
+          } ),
+      ]),
+    ]);
+
+    controls.playPauseButton.addEventListener('click', () => {
+      scheduler.playing = !scheduler.playing;
+      top.classList.toggle('playing',scheduler.playing);
+      console.log("playing",scheduler.playing);
+    });
+    controls.restartButton.addEventListener('click', scheduler.restart);
+
+    scheduler.register({ onBeat: (beatI, playTime) => {
+      controls.beatView.innerText = beatI;
+      controls.timeView.innerText = playTime.toFixed(1);
+    } });
+
+  }
+
+
+  const makeRangeControl = (name, label, attrs, handleChange) => {
+    let inputEl, valueEl;
+    const r = el(`.control.range-control`, [
+      el('', [
+        el('label', { for:name }, [ label ]),
+        valueEl = el('span.value'),
+      ]),
+      inputEl = el('input', { type:'range', name, ...attrs })
+    ])
+    // console.log("inputEl.value",inputEl.value);
+
+    const onRealChange = () => {
+      makeChange(+inputEl.value);  // Chrome/webkit bug?: inputEl.value integer before attached to DOM, wtf
+    }
+    const makeChange = v => {
+      console.log('range control change:', name, v);
+      valueEl.innerText = handleChange(v);
+    }
+    makeChange(attrs.value);
+    inputEl.addEventListener('input', onRealChange);
+
+    return r;
+  }
+
+
+  const attachBeatGrid = (scheduler, drums) => {
     const RUN = () => {
       renderBeatGrid();
       registerWithScheduler();
     }
 
     const beatCount = 8;
-    const grid = [];
+
+    const grid = drums.map( () =>
+      [...Array(beatCount).keys()].map(() => false) );
+
+    const buttonsPerBeat = [...Array(beatCount).keys()].map( () => [] );
 
     const renderBeatGrid = () => {
-      drums.forEach( (drum, drumI) => {
-        const drumBeats = [];
-        grid.push(drumBeats);
-
-        const drumRow = document.createElement('div');
-        document.querySelector('#beat-grid').appendChild( drumRow );
-        for (let beatI = 0; beatI < beatCount; beatI++) {
-          drumBeats.push(false);
-          const button = document.createElement('button');
-          button.addEventListener('click', () => {
-            drumBeats[beatI] = !drumBeats[beatI];
-            button.classList.toggle('on', drumBeats[beatI]);
-            scheduler.reset();
+      el.select('#beat-grid', grid.map( drumBeats =>
+        el('.beat-row', drumBeats.map( (v, beatI) => {
+          const button = el('button', {
+            click: () => {
+              drumBeats[beatI] = !drumBeats[beatI];
+              button.classList.toggle('on', drumBeats[beatI]);
+              scheduler.reset();
+            }
           });
-          drumRow.appendChild(button);
-        }
-      })
+          buttonsPerBeat[beatI].push(button);
+          return button
+        } ))
+      ))
     }
 
-    registerWithScheduler = () => {
-      // TODO: removal
+    const registerWithScheduler = () => {
+      // TODO: unregister on destruction
       scheduler.register({
 
-        scheduleBeat: (beatI, startTime) => {
-          return drums.map( (drum, drumI) => grid[drumI][beatI % beatCount]  &&  drum(startTime) );
+        scheduleBeat: (beatI, scheduleTime) => {
+          return drums.map( (drum, drumI) => grid[drumI][beatI % beatCount]  &&  drum(scheduleTime) );
         },
 
         onBeat: beatI => {
           if (!(beatI%8))  console.log("-- beatI LOOP", beatI%8, beatI);
 
-          // TODO: keep beat buttons indexed by beat and use those, rather than using selectors? messy?
-          document.querySelectorAll('#beat-grid button.current')
-            .forEach(x => x.classList.remove('current'));
-          document.querySelectorAll(`#beat-grid button:nth-child(${ 1 + beatI % beatCount })`)
-            .forEach(x => x.classList.add('current'));
+          buttonsPerBeat.forEach( buttons =>
+            buttons.forEach( button =>
+              button.classList.remove('current') ) );
+
+          buttonsPerBeat[beatI % beatCount]
+            .forEach( button =>
+              button.classList.add('current') );
         },
 
       });
@@ -337,6 +351,44 @@
       return oscillator;  // an AudioScheduledSourceNode, for lookahead management by scheduler
     }
   }
+
+
+  const el = (what, attrs, children) => {
+    // Simple mechanism for defining DOM programatically
+
+    if (typeof what === 'string') {
+      const m = what.match(  /^([\w-_]+)?(#[\w-_]*)?((?:.[\w-_]+)+)?$/  );
+      if (!m)  throw new Error("Can't make elem from string: "+what)
+      const [str, tag, id, classes] = m;
+      what = document.createElement(tag||'div');
+      if (id)  what.id = id;
+      if (classes)  classes.split('.').map(x => x && what.classList.add(x));
+    }
+    if (!(what instanceof Element))  throw new Error("What's that?: "+what);
+
+    if (attrs) {
+      if (attrs instanceof Array && !children) {
+        children = attrs;
+        attrs = null;
+      } else {
+        Object.entries(attrs).forEach( ([k,v]) =>
+          typeof v === 'function'
+            ? what.addEventListener (k,v)
+            : what.setAttribute     (k,v)
+          );
+      }
+    }
+
+    if (children) {
+      children.forEach(x => {
+        if (typeof x === 'string')  x = document.createTextNode(x);
+        what.appendChild(x);
+      })
+    }
+
+    return what;
+  }
+  el.select = (selector, ...a) => el(document.querySelector(selector), ...a);
 
 
   // "Globals"
