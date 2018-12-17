@@ -1,13 +1,15 @@
 
-const RUN = () => {
+const RUN = (selector='body') => {
   const scheduler = makeScheduler();
   const master = makeMaster();
 
-  attachTopControls(scheduler, master);
+  const topEl = attachTopControls(scheduler, master);
 
   const drums = [ 69-12, 69-7, 69 ]  // 69 == MIDI A4; 12 == octave note width;
     .map( midiNote => makeSimpleOscillatorDrum(master, midiNote) );
-  attachBeatGrid(scheduler, drums);
+  const beatGridEl = attachBeatGrid(scheduler, drums);
+
+  el.select(selector, [topEl, beatGridEl]);
 }
 
 
@@ -134,11 +136,11 @@ const attachTopControls = (scheduler, master) => {
   const controls = {};
   const playPause = () => {
     scheduler.playing = !scheduler.playing;
-    top.classList.toggle('playing',scheduler.playing);
+    topEl.classList.toggle('playing',scheduler.playing);
     console.log("playing",scheduler.playing);
   };
 
-  const top = el.select('#top-controls', [
+  const topEl = el('.top-controls', [
     el('.row', [
       controls.playPauseButton   = el('.control.button.play-pause-button', { click:playPause } ),
       controls.restartButton     = el('.control.button.restart-button',    { click:scheduler.restart } ),
@@ -163,6 +165,7 @@ const attachTopControls = (scheduler, master) => {
     controls.timeView.setValue(playTime.toFixed(1));
   } });
 
+  return topEl;
 }
 
 
@@ -203,8 +206,8 @@ const makeRangeControl = (name, label, attrs, handleChange) => {
 
 const attachBeatGrid = (scheduler, drums) => {
   const RUN = () => {
-    renderBeatGrid();
     registerWithScheduler();
+    return renderBeatGrid();
   }
 
   const beatCount = 8;
@@ -214,8 +217,8 @@ const attachBeatGrid = (scheduler, drums) => {
 
   const buttonsPerBeat = [...Array(beatCount).keys()].map( () => [] );
 
-  const renderBeatGrid = () => {
-    el.select('#beat-grid', grid.map( drumBeats =>
+  const renderBeatGrid = () =>
+    el('.beat-grid', grid.map( drumBeats =>
       el('.beat-row', drumBeats.map( (v, beatI) => {
         const button = el('button', {
           click: () => {
@@ -228,7 +231,6 @@ const attachBeatGrid = (scheduler, drums) => {
         return button
       } ))
     ))
-  }
 
   const registerWithScheduler = () => {
     // TODO: unregister on destruction
@@ -253,7 +255,7 @@ const attachBeatGrid = (scheduler, drums) => {
     });
   }
 
-  RUN();
+  return RUN();
 }
 
 

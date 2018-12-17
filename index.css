@@ -4,7 +4,7 @@ body {
   font-family: sans-serif;
 }
 
-#top-controls {
+.top-controls {
   padding: 0.2em;
   background-color: #f7f7f7;
 }
@@ -56,7 +56,7 @@ body {
 .playing .play-pause-button:before { content: "||"; }
 .restart-button:before { content: "⎌"; }
 
-#beat-grid {
+.beat-grid {
   button {
     background-color: #444;
     width:  4em;
