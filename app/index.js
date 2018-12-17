@@ -2,13 +2,14 @@ const el = require('./el');
 
 
 const RUN = (selector='body') => {
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();  // TODO: by browser policy, must (I THINK!) be created in a click handler or all audio is muted (ok for now on desktop Chrome, but to change in next Chrome release)
+
+  const scheduler = makeScheduler(audioCtx);
+  const master = makeMaster(audioCtx);
+
+  const topEl = attachTopControls(audioCtx, scheduler, master);
+
   const instruments = require('./instruments');
-
-  const scheduler = makeScheduler();
-  const master = makeMaster();
-
-  const topEl = attachTopControls(scheduler, master);
-
   const drums = [ 69-12, 69-7, 69 ]  // 69 == MIDI A4; 12 == octave note width;
     .map( midiNote => instruments.makeSimpleOscillatorDrum(audioCtx, master, midiNote) );
   const beatGridEl = attachBeatGrid(scheduler, drums);
@@ -17,7 +18,7 @@ const RUN = (selector='body') => {
 }
 
 
-const makeScheduler = () => {
+const makeScheduler = audioCtx => {
   audioCtx.suspend();
 
   const scheduledNodeSet = new Set;
@@ -128,7 +129,7 @@ const makeScheduler = () => {
 }
 
 
-const makeMaster = () => {
+const makeMaster = audioCtx => {
   const master = audioCtx.createGain();
   master.gain.value = 0.2;
   master.connect(audioCtx.destination);
@@ -136,7 +137,7 @@ const makeMaster = () => {
 }
 
 
-const attachTopControls = (scheduler, master) => {
+const attachTopControls = (audioCtx, scheduler, master) => {
   const controls = {};
   const playPause = () => {
     scheduler.playing = !scheduler.playing;
@@ -261,10 +262,6 @@ const attachBeatGrid = (scheduler, drums) => {
 
   return RUN();
 }
-
-
-// "Globals"
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();  // TODO: by browser policy, must (I THINK!) be created in a click handler or all audio is muted (ok for now on desktop Chrome, but to change in next Chrome release)
 
 
 RUN();
