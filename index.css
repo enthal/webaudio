@@ -1,0 +1,75 @@
+
+body {
+  text-align: center;
+  font-family: sans-serif;
+}
+
+#top-controls {
+  padding: 0.2em;
+  background-color: #f7f7f7;
+}
+
+.control {
+  background-color: #DDD;
+  padding: 0 0.2em;
+  margin: 4px;
+  border-radius: 10px;
+  display: inline-block;
+}
+.control.button {
+  font-size: 300%;
+  width: 1em;
+  height: 1.2em;
+}
+.control.value {
+  padding: 0.3em;
+  text-align: left;
+}
+.control.value .value-text {
+  font-size: 150%;
+  font-family: monospace;
+}
+
+.control.range-control {
+  padding: 0.4em;
+}
+.control.range-control > * {
+  display: block;
+  text-align: left;
+}
+.control.range-control label {
+  padding-right: 1em;
+}
+.control.range-control .value {
+  font-size: 150%;
+  font-family: monospace;
+}
+
+.control label {
+  font-size: 80%;
+  color: #555;
+  font-weight: 100;
+}
+
+.play-pause-button:before { content: "▶︎"; }
+.playing .play-pause-button:before { content: "||"; }
+.restart-button:before { content: "⎌"; }
+
+#beat-grid button {
+  background-color: #444;
+  width:  4em;
+  height: 4em;
+}
+#beat-grid button.on {
+  background-color: #DD0;
+}
+#beat-grid button.current {
+  background-color: #888;
+}
+#beat-grid button.current.on {
+  background-color: #FF3;
+}
+
+.row > * {
+  vertical-align: middle;
+}
