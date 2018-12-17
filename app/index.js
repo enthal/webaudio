@@ -2,13 +2,15 @@ const el = require('./el');
 
 
 const RUN = (selector='body') => {
+  const instruments = require('./instruments');
+
   const scheduler = makeScheduler();
   const master = makeMaster();
 
   const topEl = attachTopControls(scheduler, master);
 
   const drums = [ 69-12, 69-7, 69 ]  // 69 == MIDI A4; 12 == octave note width;
-    .map( midiNote => makeSimpleOscillatorDrum(master, midiNote) );
+    .map( midiNote => instruments.makeSimpleOscillatorDrum(audioCtx, master, midiNote) );
   const beatGridEl = attachBeatGrid(scheduler, drums);
 
   el.select(selector, [topEl, beatGridEl]);
@@ -261,34 +263,8 @@ const attachBeatGrid = (scheduler, drums) => {
 }
 
 
-const makeSimpleOscillatorDrum = (master, midiNote) => {
-  return startTime => {
-    const duration = 1.0;
-    const oscillator = audioCtx.createOscillator();
-    // oscillator.type = 'triangle';
-    oscillator.frequency.value = freqForMidiNoteNumber(midiNote);
-    oscillator.start(startTime + 0.0);
-    oscillator.stop (startTime + duration*2);
-
-    const envelope = audioCtx.createGain();  // TODO: do these leak?  Unreachable after oscillator stops, though not disconnected.  When I tried to disconnect them thereafter, things gliched and swerved.  Why?
-    envelope.gain.linearRampToValueAtTime      (0.0001, 0.000001);                   // initial
-    envelope.gain.exponentialRampToValueAtTime (1.0, startTime + duration * 0.015);  // Attack
-    envelope.gain.exponentialRampToValueAtTime (0.3, startTime + duration * 0.4);    // Decay
-    envelope.gain.setValueAtTime               (0.3, startTime + duration * 0.8);    // Sustain
-    envelope.gain.linearRampToValueAtTime      (0.0001, startTime + duration * 2.0); // Release
-
-    oscillator.connect(envelope);
-    envelope.connect(master);
-
-    // console.log("schedule start", startTime, midiNote, audioCtx.currentTime, );
-    return oscillator;  // an AudioScheduledSourceNode, for lookahead management by scheduler
-  }
-}
-
-
 // "Globals"
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();  // TODO: by browser policy, must (I THINK!) be created in a click handler or all audio is muted (ok for now on desktop Chrome, but to change in next Chrome release)
-const freqForMidiNoteNumber = n => Math.pow(2, (n-69)/12) * 440
 
 
 RUN();
