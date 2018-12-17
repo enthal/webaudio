@@ -1,7 +1,8 @@
 const el = require('./el');
 
 
-const RUN = (selector='body') => {
+module.exports =
+(selector='body') => {
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();  // TODO: by browser policy, must (I THINK!) be created in a click handler or all audio is muted (ok for now on desktop Chrome, but to change in next Chrome release)
 
   const scheduler = require('./scheduler')(audioCtx);
@@ -24,6 +25,3 @@ const makeMaster = audioCtx => {
   master.connect(audioCtx.destination);
   return master;
 }
-
-
-RUN();

@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "author": "Tim James <tjames@tjames.com>",
   "license": "MIT",
+  "main": "index.js",
   "scripts": {
     "build": "gulp build",
     "start": "gulp dev"
