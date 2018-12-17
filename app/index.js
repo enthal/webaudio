@@ -1,3 +1,5 @@
+const el = require('./el');
+
 
 const RUN = (selector='body') => {
   const scheduler = makeScheduler();
@@ -284,46 +286,9 @@ const makeSimpleOscillatorDrum = (master, midiNote) => {
 }
 
 
-const el = (what, attrs, children) => {
-  // Simple mechanism for defining DOM programatically
-
-  if (typeof what === 'string') {
-    const m = what.match(  /^([\w-_]+)?(#[\w-_]*)?((?:.[\w-_]+)+)?$/  );
-    if (!m)  throw new Error("Can't make elem from string: "+what)
-    const [str, tag, id, classes] = m;
-    what = document.createElement(tag||'div');
-    if (id)  what.id = id;
-    if (classes)  classes.split('.').map(x => x && what.classList.add(x));
-  }
-  if (!(what instanceof Element))  throw new Error("What's that?: "+what);
-
-  if (attrs) {
-    if (attrs instanceof Array && !children) {
-      children = attrs;
-      attrs = null;
-    } else {
-      Object.entries(attrs).forEach( ([k,v]) =>
-        typeof v === 'function'
-          ? what.addEventListener (k,v)
-          : what.setAttribute     (k,v)
-        );
-    }
-  }
-
-  if (children) {
-    children.forEach(x => {
-      if (typeof x === 'string')  x = document.createTextNode(x);
-      what.appendChild(x);
-    })
-  }
-
-  return what;
-}
-el.select = (selector, ...a) => el(document.querySelector(selector), ...a);
-
-
 // "Globals"
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();  // TODO: by browser policy, must (I THINK!) be created in a click handler or all audio is muted (ok for now on desktop Chrome, but to change in next Chrome release)
 const freqForMidiNoteNumber = n => Math.pow(2, (n-69)/12) * 440
+
 
 RUN();
