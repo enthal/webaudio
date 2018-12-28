@@ -10,8 +10,14 @@ module.exports =
     const master = makeMaster(audioCtx);
     const topEl = require('./controls').attachTopControls(audioCtx, scheduler, master);
 
-    const drums = makeDrums(master, [ 69-12, 69-7, 69 ]);  // 69 == MIDI A4; 12 == octave note width;
-    const beatGridEl = require('./beatGrid')(scheduler, drums);
+    const beatGridEl = require('./beatGrid')(scheduler, [
+      ...makeMidiDrums(master, [ 69-12, 69-7, 69 ]),  // 69 == MIDI A4; 12 == octave note width
+      ...makeSampleDrums(master, [
+        'Bass-Drum-1.m4a',
+        'Hip-Hop-Snare-1.m4a',
+        'Bamboo.m4a',
+      ])
+    ]);
 
     el.select(selector, [topEl, beatGridEl]);
   }
@@ -23,10 +29,15 @@ module.exports =
     return master;
   }
 
-  const makeDrums = (output, midiNotes) =>
+  const makeMidiDrums = (output, midiNotes) =>
     midiNotes.map( midiNote =>
       require('./instruments')
         .makeSimpleOscillatorDrum(audioCtx, output, midiNote) );
+
+  const makeSampleDrums = (output, urls) =>
+    urls.map( url =>
+      require('./instruments')
+        .makeUrlSampleDrum(audioCtx, output, url) );
 
   GO();
 }

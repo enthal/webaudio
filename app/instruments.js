@@ -22,4 +22,23 @@ exports.makeSimpleOscillatorDrum = (audioCtx, output, midiNote) => {
   }
 }
 
+exports.makeUrlSampleDrum = (audioCtx, output, url) => {
+  // TODO: assuming URL is only used once, here; cache externally?
+  // TODO: how best to async build instruments? How in code and how to reflect in UI?  Completion indicators?  Block play until download complete?  Progress bar?
+  let audioBuffer;
+  (async () => audioBuffer =
+    await audioCtx.decodeAudioData(
+      await (await fetch(url)).arrayBuffer())
+  )();
+
+  return startTime => {
+    const source = audioCtx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(output);
+    source.start(startTime);
+    return source;  // an AudioScheduledSourceNode, for lookahead management by scheduler
+  }
+}
+
+
 const freqForMidiNoteNumber = n => Math.pow(2, (n-69)/12) * 440
