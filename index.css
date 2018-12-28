@@ -9,11 +9,13 @@ body {
   background-color: #f7f7f7;
 }
 
-.control {
+.control, .control-base {
   background-color: #DDD;
   padding: 0 0.2em;
   margin: 4px;
   border-radius: 10px;
+}
+.control {
   display: inline-block;
 
   &.button {
@@ -44,12 +46,11 @@ body {
     font-size: 150%;
     font-family: monospace;
   }
-
-  label {
-    font-size: 80%;
-    color: #555;
-    font-weight: 100;
-  }
+}
+label, .label {
+  font-size: 80%;
+  color: #555;
+  font-weight: 100;
 }
 
 .play-pause-button:before { content: "▶︎"; }
@@ -57,6 +58,19 @@ body {
 .restart-button:before { content: "⎌"; }
 
 .beat-grid {
+  border-collapse: collapse;
+  margin: 10px auto;
+
+  td {
+    padding: 0;
+    &.label {
+      padding: 0.3em;
+      margin: 0px 0;
+      height: 100%;
+      border-bottom: solid white 1px;  /* TODO: make margin work */
+      border-radius: 15px 0 0 15px;
+    }
+  }
   button {
     background-color: #444;
     width:  4em;

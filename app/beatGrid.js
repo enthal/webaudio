@@ -16,18 +16,23 @@ const attachBeatGrid = module.exports =
   const buttonsPerBeat = [...Array(beatCount).keys()].map( () => [] );
 
   const renderBeatGrid = () =>
-    el('.beat-grid', grid.map( drumBeats =>
-      el('.beat-row', drumBeats.map( (v, beatI) => {
-        const button = el('button', {
-          click: () => {
-            drumBeats[beatI] = !drumBeats[beatI];
-            button.classList.toggle('on', drumBeats[beatI]);
-            scheduler.reset();
-          }
-        });
-        buttonsPerBeat[beatI].push(button);
-        return button
-      } ))
+    el('table.beat-grid', grid.map( (drumBeats, i) =>
+      el('tr.beat-row', [
+        el('td.control-base.label', [
+          (drums[i].$meta||{}).name||"Drum ?"
+        ]),
+        ...drumBeats.map( (v, beatI) => {
+          const button = el('button', {
+            click: () => {
+              drumBeats[beatI] = !drumBeats[beatI];
+              button.classList.toggle('on', drumBeats[beatI]);
+              scheduler.reset();
+            }
+          });
+          buttonsPerBeat[beatI].push(button);
+          return el('td',[button]);
+        } )
+      ])
     ))
 
   const registerWithScheduler = () => {

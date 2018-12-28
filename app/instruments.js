@@ -1,5 +1,5 @@
 exports.makeSimpleOscillatorDrum = (audioCtx, output, midiNote) => {
-  return startTime => {
+  const playAt = startTime => {
     const duration = 1.0;
     const oscillator = audioCtx.createOscillator();
     // oscillator.type = 'triangle';
@@ -20,6 +20,8 @@ exports.makeSimpleOscillatorDrum = (audioCtx, output, midiNote) => {
     // console.log("schedule start", startTime, midiNote, audioCtx.currentTime, );
     return oscillator;  // an AudioScheduledSourceNode, for lookahead management by scheduler
   }
+  playAt.$meta = { name:`Bell: ${midiNote}` };
+  return playAt;
 }
 
 exports.makeUrlSampleDrum = (audioCtx, output, url) => {
@@ -31,13 +33,17 @@ exports.makeUrlSampleDrum = (audioCtx, output, url) => {
       await (await fetch(url)).arrayBuffer())
   )();
 
-  return startTime => {
+  const playAt = startTime => {
     const source = audioCtx.createBufferSource();
     source.buffer = audioBuffer;
     source.connect(output);
     source.start(startTime);
     return source;  // an AudioScheduledSourceNode, for lookahead management by scheduler
-  }
+  };
+  playAt.$meta = {
+    name: url.match(/(?:.*\/)?(.+?)(\.[^.]+)?$/)[1],  // last segment
+  };
+  return playAt;
 }
 
 
