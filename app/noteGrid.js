@@ -47,19 +47,22 @@ const attachNoteGrid = module.exports =
 
   // { beatI:0, octave:4, scaleOctaveNoteI:0 },
   const playNoteAt = (note, startTime) => {
-    const duration = 1/scheduler.bps;  // in beats
+    // TODO: refactor: DRY against instruments.makeUrlSampleDrum
+    const duration = 1/scheduler.bps;  // in beats; TODO: * note.beatLength
+    const at = when => startTime + duration * when
+
     const oscillator = audioCtx.createOscillator();
     // oscillator.type = 'triangle';
     oscillator.frequency.value = freqForMidiNoteNumber(69+note.scaleOctaveNoteI); // TODO
-    oscillator.start(startTime + 0.0);
-    oscillator.stop (startTime + duration * 2);
+    oscillator.start(at(0.0));
+    oscillator.stop (at(2));
 
     const envelope = audioCtx.createGain();  // TODO: do these leak?  Unreachable after oscillator stops, though not disconnected.  When I tried to disconnect them thereafter, things gliched and swerved.  Why?
     envelope.gain.linearRampToValueAtTime      (0.0001, 0.000001);                   // initial
-    envelope.gain.exponentialRampToValueAtTime (1.0, startTime + duration * 0.015);  // Attack
-    envelope.gain.exponentialRampToValueAtTime (0.3, startTime + duration * 0.4);    // Decay
-    envelope.gain.setValueAtTime               (0.3, startTime + duration * 1.0);    // Sustain
-    envelope.gain.linearRampToValueAtTime      (0.0001, startTime + duration * 1.5); // Release
+    envelope.gain.exponentialRampToValueAtTime (1.0,    at(0.015));  // Attack
+    envelope.gain.exponentialRampToValueAtTime (0.3,    at(0.4));    // Decay
+    envelope.gain.setValueAtTime               (0.3,    at(1.0));    // Sustain
+    envelope.gain.linearRampToValueAtTime      (0.0001, at(1.5)); // Release
 
     oscillator.connect(envelope);
     envelope.connect(output);
