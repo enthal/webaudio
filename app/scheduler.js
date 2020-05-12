@@ -30,7 +30,9 @@ audioCtx => {
       const scheduleTime = (lastScheduledTime == null)
         ? playTime          + (beatPart && 1 - beatPart) / bps
         : lastScheduledTime +                          1 / bps;
+
       if (scheduleTime > playTime + lookaheadDuration)  break;
+
       lastScheduledTime = scheduleTime;
       lastScheduledBeatI = ++scheduleBeatI;
 
@@ -100,6 +102,7 @@ audioCtx => {
     get playing()  { return playing; },
     set playing(x) { playing = x; },
     get bpm()  { return bps*60; },
+    get bps()  { return bps; },
     set bpm(x) {
       bps = x/60;
       resetLookaheadSchedule();

@@ -5,7 +5,7 @@ const attachBeatGrid = module.exports =
 (scheduler, drums) => {
   const RUN = () => {
     registerWithScheduler();
-    return renderBeatGrid();
+    return renderEls();
   }
 
   const beatCount = 8;
@@ -15,7 +15,7 @@ const attachBeatGrid = module.exports =
 
   const buttonsPerBeat = [...Array(beatCount).keys()].map( () => [] );
 
-  const renderBeatGrid = () =>
+  const renderEls = () =>
     el('table.beat-grid', grid.map( (drumBeats, i) =>
       el('tr.beat-row', [
         el('td.control-base.label', [

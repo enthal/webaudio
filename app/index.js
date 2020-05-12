@@ -10,6 +10,8 @@ module.exports =
     const master = makeMaster(audioCtx);
     const topEl = require('./controls').attachTopControls(audioCtx, scheduler, master);
 
+    const noteGridEl = require('./noteGrid')(scheduler, audioCtx, master);
+
     const beatGridEl = require('./beatGrid')(scheduler, [
       ...makeMidiDrums(master, [ 69-12, 69-7, 69 ]),  // 69 == MIDI A4; 12 == octave note width
       ...makeSampleDrums(master, [
@@ -19,7 +21,7 @@ module.exports =
       ])
     ]);
 
-    el.select(selector, [topEl, beatGridEl]);
+    el.select(selector, [topEl, noteGridEl, beatGridEl]);
   }
 
   const makeMaster = () => {
