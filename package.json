@@ -8,16 +8,20 @@
     "build": "gulp build",
     "start": "gulp dev"
   },
-  "dependencies": {
+  "devDependencies": {
     "autoprefixer": "^9.4.2",
     "gulp": "3.9.1",
     "gulp-sequence": "^1.0.0",
-    "gulp-static-web": "enthal/gulp-static-web#master",
+    "gulp-static-web": "^1.0.0",
     "lost": "^8.3.0",
     "postcss-color-function": "^4.0.1",
+    "postcss-comment": "^2.0.0",
     "postcss-import": "^12.0.1",
     "postcss-nested-vars": "^1.0.0",
     "precss": "^4.0.0",
+    "uniq": "^1.0.1"
+  },
+  "dependencies": {
     "uniq": "^1.0.1"
   }
 }

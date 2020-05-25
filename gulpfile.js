@@ -10,6 +10,7 @@ require('gulp-static-web')(gulp, {
     require('postcss-nested-vars'),
     require('postcss-color-function'),
   ],
+  postcssParser: require('postcss-comment'),
 })
 
 gulp.task('default', sequence('static', ['browserify', 'postcss']))
