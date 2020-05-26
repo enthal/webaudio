@@ -57,6 +57,7 @@ const attachNoteGrid = module.exports =
     });
 
     elsvg = el.withNs("http://www.w3.org/2000/svg")
+
     return el('div.note-grid.control', [ // TODO scrollable, more octaves
       elsvg('svg', {
         width:dx(beatCount),
@@ -73,8 +74,28 @@ const attachNoteGrid = module.exports =
           notes.push(note);
           e.target.appendChild(makeSvgNote(note));
           scheduler.reset();
+          e.preventDefault();  // TODO: prevent selection via drag
         },
-      }),
+      }, [
+        elsvg('g.lines', [
+          ...[...Array(beatCount+1).keys()].map(i =>
+            elsvg('polyline', {
+              points: `
+                ${dx(i)},${dy(0)}
+                ${dx(i)},${dy(7)}
+                `,
+              stroke: !(i%4) ? '#777777' : '#b7b7b7', // TODO style
+            }) ),
+          ...[...Array(7+1).keys()].map(i =>
+            elsvg('polyline', {
+              points: `
+                ${dx(        0)},${dy(i)}
+                ${dx(beatCount)},${dy(i)}
+                `,
+              stroke:'#b7b7b7', // TODO style
+            }) ),
+        ])
+      ]),
     ]);
   }
 
@@ -88,7 +109,7 @@ const attachNoteGrid = module.exports =
         ${p2.x},${p2.y}
         ${p1.x},${p2.y}
         `,
-      fill:'lightblue',
+      fill:'lightblue',  // TODO: style
       stroke:'steelblue',
       click: e => {
         console.log("note", e);
@@ -97,6 +118,7 @@ const attachNoteGrid = module.exports =
         scheduler.reset();
         // e.stopPropogation();  //WTF?!?
         e.cancelBubble = true;
+        e.preventDefault();
       },
     });
   }
@@ -168,13 +190,10 @@ const midi = {
 // TODO: move to utils or svg or whatever
 const makeScale = opts => {
   make = opts => {
-    const istart = opts.domain[0];
-    const istop  = opts.domain[1];
-    const ostart = opts.range[0];
-    const ostop  = opts.range[1];
-
-    return (value) =>
-      ( ostart + (ostop - ostart) * ((value - istart) / (istop - istart)) )
+    const [d0,d1] = opts.domain;
+    const [r0,r1] = opts.range;
+    return v =>
+      ( r0 + (r1 - r0) * ((v - d0) / (d1 - d0)) )
   }
 
   const scale = make(opts);
