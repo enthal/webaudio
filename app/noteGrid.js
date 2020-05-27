@@ -46,19 +46,20 @@ const attachNoteGrid = module.exports =
     // makeNote(8+7, 4, 4),
   ];
 
+  const dx = makeScale({  // beats
+    domain: [0, beatCount],
+    range:  [0, 800],
+  });
+  const dy = makeScale({  // notes in scale octave
+    domain: [0, 7],
+    range:  [400, 0],
+  });
+
+  let timeLineSvgEl, notesGSvgEl;
+  const elsvg = el.withNs("http://www.w3.org/2000/svg");
+
   const renderEls = () => {
-    dx = makeScale({  // beats
-      domain: [0, beatCount],
-      range:  [0, 800],
-    });
-    dy = makeScale({  // notes in scale octave
-      domain: [0, 7],
-      range:  [400, 0],
-    });
-
-    elsvg = el.withNs("http://www.w3.org/2000/svg")
-
-    return el('div.note-grid.control', [ // TODO scrollable, more octaves
+    return el('div.note-grid', [ // TODO scrollable, more octaves
       elsvg('svg', {
         width:dx(beatCount),
         height:dy(0),
@@ -72,7 +73,7 @@ const attachNoteGrid = module.exports =
           console.log("svgN", beatI, noteI);
           const note = makeNote(beatI, 4, noteI);
           notes.push(note);
-          e.target.appendChild(makeSvgNote(note));
+          notesGSvgEl.appendChild(makeSvgNote(note));
           scheduler.reset();
           e.preventDefault();  // TODO: prevent selection via drag
         },
@@ -94,7 +95,13 @@ const attachNoteGrid = module.exports =
                 `,
               stroke:'#b7b7b7', // TODO style
             }) ),
-        ])
+        ]),
+        notesGSvgEl = elsvg('g.notes'),
+        timeLineSvgEl = elsvg('line.time-vline', {
+          y1: dy(0),
+          y2: dy(7),
+          stroke: '#990000aa',
+        }),
       ]),
     ]);
   }
@@ -134,9 +141,12 @@ const attachNoteGrid = module.exports =
       },
 
       onBeat: beatI => {
-        console.log("NoteGrid: onBeat", beatI);
+        // console.log("NoteGrid: onBeat", beatI);
       },
 
+      onFrame: (beatReal, playTime) => {
+        timeLineSvgEl.style.transform = `translateX(${dx(beatReal%beatCount)}px)`
+      }
     });
   }
 
@@ -189,7 +199,7 @@ const midi = {
 
 // TODO: move to utils or svg or whatever
 const makeScale = opts => {
-  make = opts => {
+  const make = opts => {
     const [d0,d1] = opts.domain;
     const [r0,r1] = opts.range;
     return v =>

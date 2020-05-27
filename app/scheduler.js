@@ -18,6 +18,8 @@ audioCtx => {
     const playTime = now - sessionStartTime;
     const beatI = Math.floor(beatReal);
 
+    if (playing)  tellHandlers("onFrame", beatReal, playTime);
+
     if (lastBeatI !== beatI) {
       lastBeatI = beatI;
       tellHandlers("onBeat", beatI, playTime);
@@ -84,6 +86,8 @@ audioCtx => {
     lastBeatI = -1;
     lastScheduledBeatI = -1;
     lastScheduledTime = null;
+
+    tellHandlers("onFrame", 0, 0)
 
     audioCtx.suspend();  // but still perhaps playing==true: if so, will resume in incrementLookaheadSchedule; ensures we schedule first beat!
   }

@@ -13,12 +13,12 @@ module.exports =
     const noteGridEl = require('./noteGrid')(scheduler, audioCtx, master);
 
     const beatGridEl = require('./beatGrid')(scheduler, [
-      ...makeMidiDrums(master, [ 69-12, 69-7, 69 ]),  // 69 == MIDI A4; 12 == octave note width
       ...makeSampleDrums(master, [
         'Bass-Drum-1.m4a',
         'Hip-Hop-Snare-1.m4a',
         'Bamboo.m4a',
-      ])
+      ]),
+      ...makeMidiDrums(master, [ 69-12, 69-7, 69 ]),  // 69 == MIDI A4; 12 == octave note width
     ]);
 
     el.select(selector, [topEl, noteGridEl, beatGridEl]);
