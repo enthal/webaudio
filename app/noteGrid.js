@@ -1,4 +1,4 @@
-const el = require('./el');
+const el = require('elel');
 
 
 const attachNoteGrid = module.exports =
